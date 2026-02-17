@@ -1,0 +1,113 @@
+"""
+Backend configuration — loaded from environment / .env file.
+"""
+
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Load .env from project root
+_env_path = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(_env_path)
+
+
+class Config:
+    """Flask + app configuration."""
+
+    # ── Flask / DB ──────────────────────────────────────────────
+    FLASK_HOST: str = os.getenv("FLASK_HOST", "127.0.0.1")
+    FLASK_PORT: int = int(os.getenv("FLASK_PORT", "5000"))
+    SQLALCHEMY_DATABASE_URI: str = os.getenv("DATABASE_URI", "sqlite:///telemetry.db")
+    SQLALCHEMY_TRACK_MODIFICATIONS: bool = False
+
+    # ── Productivity thresholds ─────────────────────────────────
+    BUCKET_SIZE_SEC: int = int(os.getenv("BUCKET_SIZE_SEC", "60"))
+
+    # Combined interaction threshold (keystrokes + clicks)
+    PRODUCTIVE_INTERACTION_THRESHOLD: int = int(
+        os.getenv("PRODUCTIVE_INTERACTION_THRESHOLD", "10")
+    )
+    # Keystroke-only threshold (if user is mostly typing)
+    PRODUCTIVE_KEYSTROKE_THRESHOLD: int = int(
+        os.getenv("PRODUCTIVE_KEYSTROKE_THRESHOLD", "5")
+    )
+    # Mouse-only threshold (if user is mostly clicking — design tools, etc.)
+    PRODUCTIVE_MOUSE_THRESHOLD: int = int(
+        os.getenv("PRODUCTIVE_MOUSE_THRESHOLD", "3")
+    )
+
+    # ── Reading / Active Presence detection ──────────────────────
+    # Minimum mouse movement (pixels) to infer physical presence (reading/scrolling)
+    MOUSE_MOVEMENT_THRESHOLD: float = float(
+        os.getenv("MOUSE_MOVEMENT_THRESHOLD", "50")
+    )
+    # OS idle seconds beyond which the user is assumed away from the computer
+    IDLE_AWAY_THRESHOLD: float = float(
+        os.getenv("IDLE_AWAY_THRESHOLD", "30")
+    )
+    # Anti-wiggle: minimum 1-second samples with mouse movement in a bucket
+    # to count as sustained presence (real reading vs occasional nudge)
+    MOUSE_MOVEMENT_MIN_SAMPLES: int = int(
+        os.getenv("MOUSE_MOVEMENT_MIN_SAMPLES", "15")
+    )
+
+    # ── Anti-cheat: Interaction variance ────────────────────────
+    # Minimum fraction of samples with zero interaction (natural pauses)
+    MIN_ZERO_SAMPLE_RATIO: float = float(
+        os.getenv("MIN_ZERO_SAMPLE_RATIO", "0.25")
+    )
+    # Minimum distinct per-sample interaction values (real typing = many, bot = 1-2)
+    MIN_DISTINCT_VALUES: int = int(
+        os.getenv("MIN_DISTINCT_VALUES", "3")
+    )
+
+    # ── Multi-monitor / Split-screen / PiP distraction ─────────
+    # Fraction of bucket samples with a visible distraction needed to
+    # block the "active presence" (reading) productivity pathway
+    DISTRACTION_MIN_RATIO: float = float(
+        os.getenv("DISTRACTION_MIN_RATIO", "0.3")
+    )
+
+    # ── Meeting apps (always productive) ────────────────────────
+    # Apps that are considered productive even with zero interaction
+    # (you're talking in a meeting, not typing)
+    MEETING_APPS: list[str] = [
+        s.strip().lower()
+        for s in os.getenv(
+            "MEETING_APPS",
+            "zoom,microsoft teams,google meet,webex,facetime,slack huddle",
+        ).split(",")
+        if s.strip()
+    ]
+
+    # ── Data Retention ────────────────────────────────────────────
+    # Days of raw events to keep; older events are purged on startup
+    # 0 = disabled (keep forever)
+    DATA_RETENTION_DAYS: int = int(os.getenv("DATA_RETENTION_DAYS", "14"))
+
+    # ── Timezone ──────────────────────────────────────────────────
+    # Local timezone for day boundary calculations
+    # "today" starts at midnight in THIS timezone, not UTC
+    TIMEZONE: str = os.getenv("TIMEZONE", "UTC")
+
+    # ── Browser apps (website-level breakdown) ──────────────────
+    # Window titles of these apps are parsed to extract the website/service name
+    BROWSER_APPS: list[str] = [
+        s.strip().lower()
+        for s in os.getenv(
+            "BROWSER_APPS",
+            "safari,google chrome,firefox,microsoft edge,brave browser,arc",
+        ).split(",")
+        if s.strip()
+    ]
+
+    # ── App classification ──────────────────────────────────────
+    # Apps that are ALWAYS non-productive regardless of interaction
+    NON_PRODUCTIVE_APPS: list[str] = [
+        s.strip().lower()
+        for s in os.getenv(
+            "NON_PRODUCTIVE_APPS",
+            "youtube,netflix,reddit,twitter,instagram,facebook,tiktok",
+        ).split(",")
+        if s.strip()
+    ]

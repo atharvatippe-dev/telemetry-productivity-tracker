@@ -1,0 +1,3 @@
+# Windows-specific dependencies (in addition to requirements.txt)
+pywin32>=306
+psutil>=5.9

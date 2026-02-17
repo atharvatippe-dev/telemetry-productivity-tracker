@@ -1,0 +1,330 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1600" font-family="'Segoe UI', Arial, sans-serif">
+  <defs>
+    <filter id="shadow" x="-4%" y="-4%" width="108%" height="108%">
+      <feDropShadow dx="2" dy="2" stdDeviation="3" flood-opacity="0.15"/>
+    </filter>
+    <marker id="arrowGreen" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#22c55e"/>
+    </marker>
+    <marker id="arrowBlue" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#3b82f6"/>
+    </marker>
+    <marker id="arrowPurple" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#8b5cf6"/>
+    </marker>
+    <marker id="arrowGray" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+    </marker>
+    <linearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#1e293b"/>
+      <stop offset="100%" style="stop-color:#334155"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="1600" fill="#f8fafc" rx="12"/>
+
+  <!-- Title -->
+  <rect x="0" y="0" width="1200" height="70" fill="url(#headerGrad)" rx="12"/>
+  <rect x="0" y="35" width="1200" height="35" fill="url(#headerGrad)"/>
+  <text x="600" y="42" text-anchor="middle" fill="white" font-size="22" font-weight="bold">Telemetry Productivity Tracker - System Architecture</text>
+  <text x="600" y="62" text-anchor="middle" fill="#94a3b8" font-size="12">2-State Model: Productive vs Non-Productive | Interaction-Based Classification</text>
+
+  <!-- ============================================== -->
+  <!--  LAYER 1: OS / Hardware Signals                -->
+  <!-- ============================================== -->
+  <text x="40" y="110" fill="#64748b" font-size="11" font-weight="bold" letter-spacing="2">LAYER 1 - OS / HARDWARE SIGNALS</text>
+  <rect x="30" y="120" width="1140" height="160" rx="10" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+
+  <!-- Keyboard -->
+  <rect x="60" y="140" width="160" height="115" rx="8" fill="white" stroke="#22c55e" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="110" y="150" width="60" height="30" rx="4" fill="#dcfce7"/>
+  <text x="140" y="170" text-anchor="middle" fill="#22c55e" font-size="14" font-weight="bold">KB</text>
+  <text x="140" y="197" text-anchor="middle" fill="#1e293b" font-size="13" font-weight="bold">Keyboard</text>
+  <text x="140" y="213" text-anchor="middle" fill="#64748b" font-size="10">pynput listener</text>
+  <text x="140" y="228" text-anchor="middle" fill="#64748b" font-size="10">keystroke_count only</text>
+  <text x="140" y="243" text-anchor="middle" fill="#ef4444" font-size="9" font-weight="bold">NO content captured</text>
+
+  <!-- Mouse -->
+  <rect x="250" y="140" width="160" height="115" rx="8" fill="white" stroke="#3b82f6" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="300" y="150" width="60" height="30" rx="4" fill="#dbeafe"/>
+  <text x="330" y="170" text-anchor="middle" fill="#3b82f6" font-size="14" font-weight="bold">MS</text>
+  <text x="330" y="197" text-anchor="middle" fill="#1e293b" font-size="13" font-weight="bold">Mouse</text>
+  <text x="330" y="213" text-anchor="middle" fill="#64748b" font-size="10">pynput listener</text>
+  <text x="330" y="228" text-anchor="middle" fill="#64748b" font-size="10">clicks + distance (px)</text>
+  <text x="330" y="243" text-anchor="middle" fill="#64748b" font-size="9">thread-safe Lock</text>
+
+  <!-- Active Window -->
+  <rect x="440" y="140" width="190" height="115" rx="8" fill="white" stroke="#8b5cf6" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="505" y="150" width="60" height="30" rx="4" fill="#f3e8ff"/>
+  <text x="535" y="170" text-anchor="middle" fill="#8b5cf6" font-size="14" font-weight="bold">WIN</text>
+  <text x="535" y="197" text-anchor="middle" fill="#1e293b" font-size="13" font-weight="bold">Active Window</text>
+  <text x="535" y="213" text-anchor="middle" fill="#64748b" font-size="10">NSWorkspace: app_name</text>
+  <text x="535" y="228" text-anchor="middle" fill="#64748b" font-size="10">AXUIElement: window_title</text>
+  <text x="535" y="243" text-anchor="middle" fill="#64748b" font-size="9">AppleScript fallback</text>
+
+  <!-- Idle Time -->
+  <rect x="660" y="140" width="160" height="115" rx="8" fill="white" stroke="#f59e0b" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="710" y="150" width="60" height="30" rx="4" fill="#fef9c3"/>
+  <text x="740" y="170" text-anchor="middle" fill="#f59e0b" font-size="14" font-weight="bold">IDLE</text>
+  <text x="740" y="197" text-anchor="middle" fill="#1e293b" font-size="13" font-weight="bold">OS Idle Time</text>
+  <text x="740" y="213" text-anchor="middle" fill="#64748b" font-size="10">Quartz CGEventSource</text>
+  <text x="740" y="228" text-anchor="middle" fill="#64748b" font-size="10">idle_seconds (float)</text>
+  <text x="740" y="243" text-anchor="middle" fill="#64748b" font-size="9">resets on any input</text>
+
+  <!-- Platform Abstraction -->
+  <rect x="850" y="140" width="300" height="115" rx="8" fill="#1e293b" stroke="#475569" stroke-width="2" filter="url(#shadow)"/>
+  <text x="1000" y="165" text-anchor="middle" fill="#f59e0b" font-size="12" font-weight="bold">Platform Abstraction</text>
+  <text x="1000" y="185" text-anchor="middle" fill="white" font-size="11">base.py: PlatformCollector (ABC)</text>
+  <text x="1000" y="203" text-anchor="middle" fill="white" font-size="11">factory.py: get_collector()</text>
+  <text x="1000" y="221" text-anchor="middle" fill="#22c55e" font-size="11">macos.py: MacOSCollector [active]</text>
+  <text x="1000" y="239" text-anchor="middle" fill="#64748b" font-size="11">windows.py / linux.py (extensible)</text>
+
+  <!-- Arrow: OS to Tracker -->
+  <line x1="400" y1="280" x2="400" y2="335" stroke="#22c55e" stroke-width="2" marker-end="url(#arrowGreen)" stroke-dasharray="6,3"/>
+  <text x="410" y="305" fill="#22c55e" font-size="10">OS signals</text>
+
+  <!-- ============================================== -->
+  <!--  LAYER 2: Tracker Agent                        -->
+  <!-- ============================================== -->
+  <text x="40" y="310" fill="#64748b" font-size="11" font-weight="bold" letter-spacing="2">LAYER 2 - TRACKER AGENT (tracker/agent.py)</text>
+  <rect x="30" y="320" width="1140" height="195" rx="10" fill="#ecfdf5" stroke="#86efac" stroke-width="1.5"/>
+
+  <!-- Polling Loop -->
+  <rect x="60" y="340" width="250" height="155" rx="8" fill="white" stroke="#22c55e" stroke-width="2" filter="url(#shadow)"/>
+  <text x="185" y="365" text-anchor="middle" fill="#22c55e" font-size="14" font-weight="bold">Polling Loop</text>
+  <text x="185" y="385" text-anchor="middle" fill="#1e293b" font-size="11">Every 1s (POLL_INTERVAL):</text>
+  <text x="80" y="405" fill="#64748b" font-size="10">1. get_active_window()</text>
+  <text x="80" y="420" fill="#64748b" font-size="10">2. get_and_reset_counts()</text>
+  <text x="80" y="435" fill="#64748b" font-size="10">3. get_idle_seconds()</text>
+  <text x="80" y="450" fill="#64748b" font-size="10">4. Build sample dict</text>
+  <text x="80" y="465" fill="#64748b" font-size="10">5. Append to in-memory batch</text>
+  <text x="80" y="480" fill="#22c55e" font-size="10" font-weight="bold">Uses time.monotonic()</text>
+
+  <!-- Batch + Send -->
+  <rect x="340" y="340" width="250" height="155" rx="8" fill="white" stroke="#3b82f6" stroke-width="2" filter="url(#shadow)"/>
+  <text x="465" y="365" text-anchor="middle" fill="#3b82f6" font-size="14" font-weight="bold">Batch and Send</text>
+  <text x="465" y="385" text-anchor="middle" fill="#1e293b" font-size="11">Every 10s (BATCH_INTERVAL):</text>
+  <text x="355" y="405" fill="#64748b" font-size="10">1. POST /track {events: [...]}</text>
+  <text x="355" y="420" fill="#64748b" font-size="10">2. 201? clear batch</text>
+  <text x="355" y="435" fill="#64748b" font-size="10">3. Fail? save to buffer.json</text>
+  <text x="355" y="455" fill="#1e293b" font-size="10" font-weight="bold">On startup:</text>
+  <text x="355" y="470" fill="#64748b" font-size="10">Flush stale buffer first</text>
+  <text x="355" y="485" fill="#64748b" font-size="10">JSON-lines format (1 event/line)</text>
+
+  <!-- Resilience -->
+  <rect x="620" y="340" width="250" height="155" rx="8" fill="white" stroke="#f59e0b" stroke-width="2" filter="url(#shadow)"/>
+  <text x="745" y="365" text-anchor="middle" fill="#f59e0b" font-size="14" font-weight="bold">Resilience</text>
+  <line x1="635" y1="380" x2="855" y2="380" stroke="#fde68a" stroke-width="1"/>
+  <text x="635" y="400" fill="#64748b" font-size="10">Graceful shutdown (SIGINT/SIGTERM)</text>
+  <text x="635" y="418" fill="#64748b" font-size="10">Local disk buffer if backend down</text>
+  <text x="635" y="436" fill="#64748b" font-size="10">Auto-flush buffer on reconnect</text>
+  <text x="635" y="454" fill="#64748b" font-size="10">Thread-safe input counters</text>
+  <text x="635" y="472" fill="#64748b" font-size="10">Error isolation per sample</text>
+  <text x="635" y="490" fill="#64748b" font-size="10">CAPTURE_WINDOW_TITLE toggle</text>
+
+  <!-- Sample Schema -->
+  <rect x="900" y="340" width="250" height="155" rx="8" fill="#1e293b" stroke="#475569" stroke-width="2" filter="url(#shadow)"/>
+  <text x="1025" y="365" text-anchor="middle" fill="#f59e0b" font-size="12" font-weight="bold">Sample Schema (per 1s)</text>
+  <text x="915" y="388" fill="#94a3b8" font-size="10" font-family="monospace">timestamp: ISO 8601 UTC</text>
+  <text x="915" y="406" fill="#94a3b8" font-size="10" font-family="monospace">app_name: "Cursor"</text>
+  <text x="915" y="424" fill="#94a3b8" font-size="10" font-family="monospace">window_title: "agent.py"</text>
+  <text x="915" y="442" fill="#94a3b8" font-size="10" font-family="monospace">keystroke_count: 12</text>
+  <text x="915" y="460" fill="#94a3b8" font-size="10" font-family="monospace">mouse_clicks: 3</text>
+  <text x="915" y="478" fill="#94a3b8" font-size="10" font-family="monospace">mouse_distance: 245.7</text>
+  <text x="915" y="496" fill="#94a3b8" font-size="10" font-family="monospace">idle_seconds: 1.2</text>
+
+  <!-- Arrow: Tracker to Backend -->
+  <line x1="600" y1="520" x2="600" y2="580" stroke="#3b82f6" stroke-width="3" marker-end="url(#arrowBlue)"/>
+  <rect x="500" y="535" width="200" height="25" rx="5" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+  <text x="600" y="552" text-anchor="middle" fill="#1e40af" font-size="11" font-weight="bold">POST /track (batch of 10)</text>
+
+  <!-- ============================================== -->
+  <!--  LAYER 3: Backend (Flask)                      -->
+  <!-- ============================================== -->
+  <text x="40" y="600" fill="#64748b" font-size="11" font-weight="bold" letter-spacing="2">LAYER 3 - BACKEND (Flask + SQLAlchemy + SQLite)</text>
+  <rect x="30" y="610" width="1140" height="340" rx="10" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.5"/>
+
+  <!-- REST API -->
+  <rect x="60" y="630" width="350" height="300" rx="8" fill="white" stroke="#3b82f6" stroke-width="2" filter="url(#shadow)"/>
+  <text x="235" y="655" text-anchor="middle" fill="#3b82f6" font-size="14" font-weight="bold">REST API (app.py)</text>
+  <line x1="75" y1="665" x2="395" y2="665" stroke="#bfdbfe" stroke-width="1"/>
+
+  <rect x="80" y="675" width="310" height="35" rx="5" fill="#dbeafe"/>
+  <text x="90" y="695" fill="#1e40af" font-size="11" font-weight="bold">POST /track</text>
+  <text x="200" y="695" fill="#64748b" font-size="10">Ingest batch into SQLite</text>
+
+  <rect x="80" y="718" width="310" height="35" rx="5" fill="#dcfce7"/>
+  <text x="90" y="738" fill="#166534" font-size="11" font-weight="bold">GET /summary/today</text>
+  <text x="237" y="738" fill="#64748b" font-size="10">bucketize + summarize</text>
+
+  <rect x="80" y="761" width="310" height="35" rx="5" fill="#fef9c3"/>
+  <text x="90" y="781" fill="#854d0e" font-size="11" font-weight="bold">GET /apps</text>
+  <text x="165" y="781" fill="#64748b" font-size="10">bucketize + app_breakdown</text>
+
+  <rect x="80" y="804" width="310" height="35" rx="5" fill="#fce7f3"/>
+  <text x="90" y="824" fill="#9d174d" font-size="11" font-weight="bold">GET /daily?days=7</text>
+  <text x="218" y="824" fill="#64748b" font-size="10">per-day bucketize loop</text>
+
+  <rect x="80" y="847" width="310" height="35" rx="5" fill="#f1f5f9"/>
+  <text x="90" y="867" fill="#475569" font-size="11" font-weight="bold">GET /health</text>
+  <text x="178" y="867" fill="#64748b" font-size="10">{"status": "ok"}</text>
+
+  <text x="235" y="915" text-anchor="middle" fill="#64748b" font-size="10">Inference at query time: config changes re-evaluate history</text>
+
+  <!-- Productivity Engine -->
+  <rect x="440" y="630" width="340" height="300" rx="8" fill="white" stroke="#8b5cf6" stroke-width="2" filter="url(#shadow)"/>
+  <text x="610" y="655" text-anchor="middle" fill="#8b5cf6" font-size="14" font-weight="bold">Productivity Engine</text>
+  <text x="610" y="668" text-anchor="middle" fill="#8b5cf6" font-size="10">(productivity.py)</text>
+  <line x1="455" y1="675" x2="765" y2="675" stroke="#ddd6fe" stroke-width="1"/>
+
+  <text x="460" y="698" fill="#1e293b" font-size="12" font-weight="bold">Decision Tree:</text>
+  <rect x="460" y="707" width="300" height="26" rx="4" fill="#fef2f2" stroke="#fca5a5" stroke-width="1"/>
+  <text x="470" y="725" fill="#991b1b" font-size="10">1. NON_PRODUCTIVE app? = non_productive</text>
+
+  <rect x="460" y="739" width="300" height="26" rx="4" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+  <text x="470" y="757" fill="#166534" font-size="10">2. Interaction >= threshold? = productive</text>
+
+  <rect x="460" y="771" width="300" height="26" rx="4" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+  <text x="470" y="789" fill="#166534" font-size="10">3. Mouse move + low idle? = productive</text>
+
+  <rect x="460" y="803" width="300" height="26" rx="4" fill="#fef2f2" stroke="#fca5a5" stroke-width="1"/>
+  <text x="470" y="821" fill="#991b1b" font-size="10">4. Everything else = non_productive</text>
+
+  <text x="460" y="850" fill="#1e293b" font-size="11" font-weight="bold">Confidence Score [0..1]:</text>
+  <text x="460" y="868" fill="#64748b" font-size="10">35% interaction density</text>
+  <text x="460" y="883" fill="#64748b" font-size="10">20% mouse presence signal</text>
+  <text x="460" y="898" fill="#64748b" font-size="10">25% event coverage</text>
+  <text x="460" y="913" fill="#64748b" font-size="10">20% idle penalty (inverted)</text>
+
+  <!-- Database + Config -->
+  <rect x="810" y="630" width="340" height="145" rx="8" fill="white" stroke="#f59e0b" stroke-width="2" filter="url(#shadow)"/>
+  <text x="980" y="655" text-anchor="middle" fill="#f59e0b" font-size="14" font-weight="bold">SQLite Database</text>
+  <line x1="825" y1="665" x2="1135" y2="665" stroke="#fde68a" stroke-width="1"/>
+  <text x="825" y="685" fill="#1e293b" font-size="11" font-weight="bold">TelemetryEvent (models.py)</text>
+  <text x="825" y="703" fill="#64748b" font-size="10" font-family="monospace">id | timestamp(indexed) | app_name</text>
+  <text x="825" y="718" fill="#64748b" font-size="10" font-family="monospace">window_title | keystroke_count</text>
+  <text x="825" y="733" fill="#64748b" font-size="10" font-family="monospace">mouse_clicks | mouse_distance</text>
+  <text x="825" y="748" fill="#64748b" font-size="10" font-family="monospace">idle_seconds</text>
+  <text x="825" y="768" fill="#64748b" font-size="9">86,400 rows/day (1 sample/sec)</text>
+
+  <rect x="810" y="790" width="340" height="140" rx="8" fill="#1e293b" stroke="#475569" stroke-width="2" filter="url(#shadow)"/>
+  <text x="980" y="815" text-anchor="middle" fill="#f59e0b" font-size="12" font-weight="bold">Config (.env to config.py)</text>
+  <text x="825" y="838" fill="#94a3b8" font-size="10" font-family="monospace">BUCKET_SIZE_SEC=60</text>
+  <text x="825" y="855" fill="#94a3b8" font-size="10" font-family="monospace">PRODUCTIVE_INTERACTION=10</text>
+  <text x="825" y="872" fill="#94a3b8" font-size="10" font-family="monospace">KEYSTROKE_THRESHOLD=5</text>
+  <text x="825" y="889" fill="#94a3b8" font-size="10" font-family="monospace">MOUSE_THRESHOLD=3</text>
+  <text x="825" y="906" fill="#94a3b8" font-size="10" font-family="monospace">MOUSE_MOVEMENT=50 IDLE_AWAY=30</text>
+  <text x="825" y="923" fill="#94a3b8" font-size="10" font-family="monospace">NON_PRODUCTIVE_APPS=youtube,...</text>
+
+  <!-- Arrow: Backend to Frontend -->
+  <line x1="600" y1="955" x2="600" y2="1010" stroke="#8b5cf6" stroke-width="3" marker-end="url(#arrowPurple)"/>
+  <rect x="480" y="968" width="240" height="25" rx="5" fill="#f3e8ff" stroke="#8b5cf6" stroke-width="1"/>
+  <text x="600" y="985" text-anchor="middle" fill="#6d28d9" font-size="11" font-weight="bold">GET /summary, /apps, /daily</text>
+
+  <!-- ============================================== -->
+  <!--  LAYER 4: Frontend (Streamlit)                 -->
+  <!-- ============================================== -->
+  <text x="40" y="1030" fill="#64748b" font-size="11" font-weight="bold" letter-spacing="2">LAYER 4 - FRONTEND (Streamlit + Plotly)</text>
+  <rect x="30" y="1040" width="1140" height="175" rx="10" fill="#fdf4ff" stroke="#d8b4fe" stroke-width="1.5"/>
+
+  <rect x="60" y="1060" width="180" height="135" rx="8" fill="white" stroke="#22c55e" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="120" y="1068" width="40" height="20" rx="3" fill="#dcfce7"/>
+  <text x="140" y="1082" text-anchor="middle" fill="#22c55e" font-size="10" font-weight="bold">#</text>
+  <text x="150" y="1108" text-anchor="middle" fill="#1e293b" font-size="12" font-weight="bold">Metric Cards</text>
+  <text x="150" y="1128" text-anchor="middle" fill="#64748b" font-size="10">Productive time</text>
+  <text x="150" y="1143" text-anchor="middle" fill="#64748b" font-size="10">Non-productive time</text>
+  <text x="150" y="1158" text-anchor="middle" fill="#64748b" font-size="10">Total tracked</text>
+  <text x="150" y="1178" text-anchor="middle" fill="#64748b" font-size="9">st.metric + st.columns</text>
+
+  <rect x="270" y="1060" width="180" height="135" rx="8" fill="white" stroke="#ef4444" stroke-width="2" filter="url(#shadow)"/>
+  <circle cx="360" cy="1078" r="10" fill="#fef2f2" stroke="#ef4444" stroke-width="1.5"/>
+  <text x="360" y="1082" text-anchor="middle" fill="#ef4444" font-size="9" font-weight="bold">%</text>
+  <text x="360" y="1108" text-anchor="middle" fill="#1e293b" font-size="12" font-weight="bold">Pie + Gauge</text>
+  <text x="360" y="1128" text-anchor="middle" fill="#64748b" font-size="10">State distribution</text>
+  <text x="360" y="1143" text-anchor="middle" fill="#64748b" font-size="10">Productivity score %</text>
+  <text x="360" y="1158" text-anchor="middle" fill="#64748b" font-size="10">Green/Red donut</text>
+  <text x="360" y="1178" text-anchor="middle" fill="#64748b" font-size="9">px.pie + go.Indicator</text>
+
+  <rect x="480" y="1060" width="180" height="135" rx="8" fill="white" stroke="#3b82f6" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="545" y="1068" width="30" height="20" rx="3" fill="#dbeafe"/>
+  <text x="560" y="1082" text-anchor="middle" fill="#3b82f6" font-size="10" font-weight="bold">||</text>
+  <text x="570" y="1108" text-anchor="middle" fill="#1e293b" font-size="12" font-weight="bold">App Breakdown</text>
+  <text x="570" y="1128" text-anchor="middle" fill="#64748b" font-size="10">Horizontal stacked bar</text>
+  <text x="570" y="1143" text-anchor="middle" fill="#64748b" font-size="10">Per-app productive vs not</text>
+  <text x="570" y="1158" text-anchor="middle" fill="#64748b" font-size="10">Sorted by total time</text>
+  <text x="570" y="1178" text-anchor="middle" fill="#64748b" font-size="9">px.bar (horizontal)</text>
+
+  <rect x="690" y="1060" width="180" height="135" rx="8" fill="white" stroke="#8b5cf6" stroke-width="2" filter="url(#shadow)"/>
+  <polyline points="720,1088 740,1072 760,1080 780,1068" fill="none" stroke="#8b5cf6" stroke-width="2"/>
+  <text x="780" y="1108" text-anchor="middle" fill="#1e293b" font-size="12" font-weight="bold">Daily Trend</text>
+  <text x="780" y="1128" text-anchor="middle" fill="#64748b" font-size="10">Line chart (per state)</text>
+  <text x="780" y="1143" text-anchor="middle" fill="#64748b" font-size="10">Stacked area chart</text>
+  <text x="780" y="1158" text-anchor="middle" fill="#64748b" font-size="10">Configurable days</text>
+  <text x="780" y="1178" text-anchor="middle" fill="#64748b" font-size="9">px.line + px.area</text>
+
+  <rect x="900" y="1060" width="250" height="135" rx="8" fill="#1e293b" stroke="#475569" stroke-width="2" filter="url(#shadow)"/>
+  <text x="1025" y="1085" text-anchor="middle" fill="#f59e0b" font-size="12" font-weight="bold">Controls (Sidebar)</text>
+  <text x="915" y="1108" fill="#94a3b8" font-size="10">Trend days slider (1-30)</text>
+  <text x="915" y="1128" fill="#94a3b8" font-size="10">Auto-refresh toggle (30s)</text>
+  <text x="915" y="1148" fill="#94a3b8" font-size="10">Responsive wide layout</text>
+  <text x="915" y="1168" fill="#94a3b8" font-size="10">Port 8501 (Streamlit default)</text>
+  <text x="915" y="1188" fill="#94a3b8" font-size="10">Browser: http://localhost:8501</text>
+
+  <!-- ============================================== -->
+  <!--  DATA FLOW + KEY DECISIONS                     -->
+  <!-- ============================================== -->
+  <rect x="30" y="1240" width="1140" height="350" rx="10" fill="white" stroke="#e2e8f0" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="600" y="1270" text-anchor="middle" fill="#1e293b" font-size="16" font-weight="bold">Data Flow and Key Design Decisions</text>
+
+  <!-- Pipeline -->
+  <text x="60" y="1300" fill="#1e293b" font-size="12" font-weight="bold">Complete Data Pipeline:</text>
+  <rect x="60" y="1310" width="120" height="30" rx="5" fill="#f1f5f9" stroke="#64748b"/>
+  <text x="120" y="1330" text-anchor="middle" fill="#1e293b" font-size="10">OS Hardware</text>
+  <line x1="185" y1="1325" x2="220" y2="1325" stroke="#64748b" stroke-width="2" marker-end="url(#arrowGray)"/>
+
+  <rect x="225" y="1310" width="140" height="30" rx="5" fill="#ecfdf5" stroke="#22c55e"/>
+  <text x="295" y="1330" text-anchor="middle" fill="#1e293b" font-size="10">Tracker (1s poll)</text>
+  <line x1="370" y1="1325" x2="405" y2="1325" stroke="#64748b" stroke-width="2" marker-end="url(#arrowGray)"/>
+
+  <rect x="410" y="1310" width="140" height="30" rx="5" fill="#dbeafe" stroke="#3b82f6"/>
+  <text x="480" y="1330" text-anchor="middle" fill="#1e293b" font-size="10">POST /track (10s)</text>
+  <line x1="555" y1="1325" x2="590" y2="1325" stroke="#64748b" stroke-width="2" marker-end="url(#arrowGray)"/>
+
+  <rect x="595" y="1310" width="120" height="30" rx="5" fill="#fef9c3" stroke="#f59e0b"/>
+  <text x="655" y="1330" text-anchor="middle" fill="#1e293b" font-size="10">SQLite Store</text>
+  <line x1="720" y1="1325" x2="755" y2="1325" stroke="#64748b" stroke-width="2" marker-end="url(#arrowGray)"/>
+
+  <rect x="760" y="1310" width="140" height="30" rx="5" fill="#f3e8ff" stroke="#8b5cf6"/>
+  <text x="830" y="1330" text-anchor="middle" fill="#1e293b" font-size="10">GET APIs (query)</text>
+  <line x1="905" y1="1325" x2="940" y2="1325" stroke="#64748b" stroke-width="2" marker-end="url(#arrowGray)"/>
+
+  <rect x="945" y="1310" width="120" height="30" rx="5" fill="#fdf4ff" stroke="#d946ef"/>
+  <text x="1005" y="1330" text-anchor="middle" fill="#1e293b" font-size="10">Dashboard UI</text>
+
+  <!-- Key Decisions -->
+  <text x="60" y="1375" fill="#1e293b" font-size="12" font-weight="bold">Key Architectural Decisions:</text>
+
+  <circle cx="70" cy="1392" r="4" fill="#22c55e"/>
+  <text x="82" y="1396" fill="#1e293b" font-size="11">Inference at query time - changing thresholds in .env instantly re-evaluates all historical data</text>
+
+  <circle cx="70" cy="1414" r="4" fill="#3b82f6"/>
+  <text x="82" y="1418" fill="#1e293b" font-size="11">Raw events stored, not pre-computed states - maximum flexibility for future analysis</text>
+
+  <circle cx="70" cy="1436" r="4" fill="#8b5cf6"/>
+  <text x="82" y="1440" fill="#1e293b" font-size="11">Platform abstraction - only tracker/platform/ changes per OS; backend + frontend are universal</text>
+
+  <circle cx="70" cy="1458" r="4" fill="#f59e0b"/>
+  <text x="82" y="1462" fill="#1e293b" font-size="11">Privacy by design - keystroke counts only, never content; window titles are the most sensitive field</text>
+
+  <circle cx="70" cy="1480" r="4" fill="#ef4444"/>
+  <text x="82" y="1484" fill="#1e293b" font-size="11">Resilience - local JSON buffer survives backend crashes; auto-flush on reconnect</text>
+
+  <!-- Thresholds -->
+  <text x="60" y="1515" fill="#1e293b" font-size="12" font-weight="bold">Threshold Summary (configurable via .env):</text>
+  <text x="60" y="1535" fill="#64748b" font-size="11">Bucket: 60s | Combined: >=10 | Keystrokes: >=5 | Clicks: >=3 | Mouse movement: >=50px | Idle away: >=30s</text>
+
+  <text x="60" y="1560" fill="#1e293b" font-size="12" font-weight="bold">Non-Productive Apps (always blocked):</text>
+  <text x="60" y="1578" fill="#ef4444" font-size="11">youtube, netflix, reddit, twitter, x.com, instagram, facebook, tiktok, twitch, discord, spotify, steam, epic games</text>
+</svg>

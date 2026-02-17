@@ -1,0 +1,5 @@
+# Linux-specific dependencies (in addition to requirements.txt)
+psutil>=5.9
+# Also install xdotool and xprintidle via your package manager:
+#   sudo apt install xdotool xprintidle   (Debian/Ubuntu)
+#   sudo dnf install xdotool xprintidle   (Fedora)

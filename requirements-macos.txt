@@ -1,0 +1,4 @@
+# macOS-specific dependencies (in addition to requirements.txt)
+pyobjc-core>=10.0
+pyobjc-framework-Cocoa>=10.0
+pyobjc-framework-Quartz>=10.0

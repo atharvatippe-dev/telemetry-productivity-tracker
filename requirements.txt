@@ -1,0 +1,26 @@
+# ─── Backend ───────────────────────────────────
+flask>=3.0
+flask-cors>=4.0
+flask-sqlalchemy>=3.1
+python-dotenv>=1.0
+
+# ─── Tracker Agent ─────────────────────────────
+requests>=2.31
+pynput>=1.7
+
+# ─── Frontend (Streamlit Dashboard) ────────────
+streamlit>=1.30
+plotly>=5.18
+pandas>=2.1
+
+# ─── macOS-specific (install only on macOS) ────
+# pyobjc-core>=10.0
+# pyobjc-framework-Cocoa>=10.0
+# pyobjc-framework-Quartz>=10.0
+
+# ─── Windows-specific (install only on Windows)─
+# pywin32>=306
+# psutil>=5.9
+
+# ─── Linux-specific (install only on Linux) ────
+# psutil>=5.9

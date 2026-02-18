@@ -1,5 +1,5 @@
 """
-Launcher — entry point for the bundled Telemetry Tracker .exe (Windows).
+Launcher - entry point for the bundled Telemetry Tracker .exe (Windows).
 
 Flow:
   1. Check if %USERPROFILE%\\.telemetry-tracker\\config.env exists
@@ -58,7 +58,7 @@ def _install_autostart() -> None:
 def main() -> None:
     # Step 1: First-launch setup if needed
     if not CONFIG_FILE.exists() or CONFIG_FILE.stat().st_size == 0:
-        logger.info("No config found — launching setup GUI.")
+        logger.info("No config found - launching setup GUI.")
         from installer.windows.setup_gui import show_setup
 
         setup_done = False

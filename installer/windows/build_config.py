@@ -1,5 +1,5 @@
 """
-Build-time configuration — values baked in by the build script.
+Build-time configuration - values baked in by the build script.
 Do NOT edit manually; this file is overwritten by build.py.
 """
 

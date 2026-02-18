@@ -1,5 +1,5 @@
 """
-Build script — creates a Windows .exe using PyInstaller.
+Build script - creates a Windows .exe using PyInstaller.
 
 Usage (from project root):
     set INSTALLER_BACKEND_URL=https://your-backend.ngrok-free.dev
@@ -33,9 +33,10 @@ def main() -> None:
     else:
         config_file = PROJECT_ROOT / "installer" / "windows" / "build_config.py"
         config_file.write_text(
-            '"""\nBuild-time configuration — values baked in by the build script.\n'
+            '"""\nBuild-time configuration - values baked in by the build script.\n'
             'Do NOT edit manually; this file is overwritten by build.py.\n"""\n\n'
-            f'BACKEND_URL = "{backend_url}"\n'
+            f'BACKEND_URL = "{backend_url}"\n',
+            encoding="utf-8",
         )
         print(f"Baked backend URL: {backend_url}")
 

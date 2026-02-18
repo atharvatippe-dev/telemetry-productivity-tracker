@@ -274,7 +274,7 @@ _header = (
     "<th>User</th>"
     "<th>Non-Productive %</th><th>Productive %</th>"
     "<th>Non-Productive Time</th><th>Productive Time</th>"
-    "<th>Total Time</th><th></th><th></th>"
+    "<th>Total Time</th><th>Actions</th>"
     "</tr>"
 )
 
@@ -291,13 +291,16 @@ for entry in leaderboard:
         f"<td>{_fmt(entry['non_productive_sec'])}</td>"
         f"<td>{_fmt(entry['productive_sec'])}</td>"
         f"<td>{_fmt(entry['total_sec'])}</td>"
-        f'<td><a href="?user_id={uid}" target="_self"'
+        f'<td style="white-space:nowrap;">'
+        f'<a href="?user_id={uid}" target="_self"'
         f' style="color:{tc}; font-weight:bold; text-decoration:underline;">'
-        f"View</a></td>"
-        f'<td><a href="?delete_user={uid}" target="_self"'
-        f' style="color:#ef4444; font-weight:bold; text-decoration:underline;"'
+        f"View</a>"
+        f' &nbsp;|&nbsp; '
+        f'<a href="?delete_user={uid}" target="_self"'
+        f' style="color:#ff6b6b; font-weight:bold; text-decoration:underline;"'
         f' onclick="return confirm(\'Delete all data for {uid}?\');">'
-        f"Delete</a></td>"
+        f"Delete</a>"
+        f"</td>"
         f"</tr>"
     )
 

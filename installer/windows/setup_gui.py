@@ -73,7 +73,7 @@ def show_setup(on_complete: callable = None) -> None:
     """Show the setup window. Calls on_complete() after config is saved."""
 
     root = tk.Tk()
-    root.title("Telemetry Tracker — Setup")
+    root.title("Telemetry Tracker - Setup")
     root.geometry("440x220")
     root.resizable(False, False)
 

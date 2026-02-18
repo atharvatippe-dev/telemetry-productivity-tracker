@@ -2,8 +2,8 @@
 Windows auto-start installer using Task Scheduler.
 
 Creates a scheduled task that runs the tracker .exe at user logon.
-Uses schtasks.exe — no extra dependencies required.
-Idempotent — safe to call multiple times.
+Uses schtasks.exe - no extra dependencies required.
+Idempotent - safe to call multiple times.
 """
 
 from __future__ import annotations
@@ -62,7 +62,7 @@ def install_autostart() -> None:
     )
 
     if result.returncode == 0:
-        logger.info("Task Scheduler entry created — tracker will auto-start on logon.")
+        logger.info("Task Scheduler entry created - tracker will auto-start on logon.")
     else:
         logger.warning(
             "schtasks /Create returned %d: %s", result.returncode, result.stderr

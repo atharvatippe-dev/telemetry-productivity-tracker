@@ -54,21 +54,21 @@ def create_app(config: Config | None = None) -> Flask:
         db.create_all()
         logger.info("Database tables ensured.")
 
-        # ── Migrate: add distraction_visible column if missing ──
-        try:
+        # ── Migrate: add missing columns (works with both SQLite and PostgreSQL) ──
+        inspector = db.inspect(db.engine)
+        existing_cols = {c["name"] for c in inspector.get_columns("telemetry_events")}
+
+        if "distraction_visible" not in existing_cols:
             db.session.execute(
                 db.text(
                     "ALTER TABLE telemetry_events "
-                    "ADD COLUMN distraction_visible BOOLEAN NOT NULL DEFAULT 0"
+                    "ADD COLUMN distraction_visible BOOLEAN NOT NULL DEFAULT false"
                 )
             )
             db.session.commit()
             logger.info("Migration: added distraction_visible column.")
-        except Exception:
-            db.session.rollback()  # Column already exists — no-op
 
-        # ── Migrate: add user_id column if missing ──────────
-        try:
+        if "user_id" not in existing_cols:
             db.session.execute(
                 db.text(
                     "ALTER TABLE telemetry_events "
@@ -77,8 +77,6 @@ def create_app(config: Config | None = None) -> Flask:
             )
             db.session.commit()
             logger.info("Migration: added user_id column.")
-        except Exception:
-            db.session.rollback()  # Column already exists — no-op
 
         # ── Auto-cleanup old events on startup ───────────────
         _run_cleanup(config)

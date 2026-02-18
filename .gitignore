@@ -25,6 +25,9 @@ tracker/buffer.json
 *.swo
 *~
 
+# PyInstaller
+*.spec
+
 # OS
 .DS_Store
 Thumbs.db

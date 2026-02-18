@@ -42,7 +42,7 @@ class TelemetryEvent(db.Model):
     mouse_clicks: int = db.Column(db.Integer, nullable=False, default=0)
     mouse_distance: float = db.Column(db.Float, nullable=False, default=0.0)
     idle_seconds: float = db.Column(db.Float, nullable=False, default=0.0)
-    distraction_visible: bool = db.Column(db.Boolean, nullable=False, default=False, server_default="0")
+    distraction_visible: bool = db.Column(db.Boolean, nullable=False, default=False, server_default=db.text("false"))
 
     def to_dict(self) -> dict:
         return {

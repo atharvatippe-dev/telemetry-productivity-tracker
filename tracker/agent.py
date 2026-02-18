@@ -53,6 +53,18 @@ BUFFER_FILE: Path = Path(os.getenv("BUFFER_FILE", str(_project_root / "tracker" 
 WAKE_THRESHOLD: float = float(os.getenv("WAKE_THRESHOLD_SEC", "30"))
 USER_ID: str = os.getenv("USER_ID", "default")
 
+# ── Ghost / system apps to ignore during Power Nap or lock screen ────
+# Samples from these apps with zero interaction are silently dropped.
+GHOST_APPS: set[str] = {
+    s.strip().lower()
+    for s in os.getenv(
+        "GHOST_APPS",
+        "loginwindow,UserNotificationCenter,ScreenSaverEngine,WindowServer,"
+        "SystemUIServer,Dock,Finder,LockScreen,logind",
+    ).split(",")
+    if s.strip()
+}
+
 # ── Privacy: Window Title Mode ──────────────────────────────────────
 # "full" = store complete title, "redacted" = keywords only, "off" = no title
 WINDOW_TITLE_MODE: str = os.getenv("WINDOW_TITLE_MODE", "full").lower().strip()
@@ -287,6 +299,17 @@ def main() -> None:
 
             counts = collector.get_and_reset_counts()
             idle = collector.get_idle_seconds()
+
+            # Skip ghost/system apps with no interaction (Power Nap, lock screen)
+            is_ghost = app_name.lower() in GHOST_APPS
+            has_interaction = counts["keystroke_count"] > 0 or counts["mouse_clicks"] > 0
+            if is_ghost and not has_interaction:
+                last_wall = now_wall
+                elapsed = time.monotonic() - loop_start
+                sleep_time = max(0, POLL_INTERVAL - elapsed)
+                if sleep_time > 0:
+                    time.sleep(sleep_time)
+                continue
 
             sample = {
                 "timestamp": datetime.now(timezone.utc).isoformat(),

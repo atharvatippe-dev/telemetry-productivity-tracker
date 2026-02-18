@@ -218,7 +218,9 @@ m2.metric("Avg Productive", f"{avg_prod:.1f}%")
 m3.metric("Avg Non-Productive", f"{avg_non_prod:.1f}%")
 m4.metric("Total Tracked", _fmt(total_tracked))
 
-# ── ROW 2 — Leaderboard table ──────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════
+#  ROW 2 — Leaderboard table (sorted: highest non-productive first)
+# ═══════════════════════════════════════════════════════════════════
 st.caption("Users ranked by non-productive percentage (highest first)")
 
 def _row_bg(np_pct: float) -> tuple[str, str]:

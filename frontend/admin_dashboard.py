@@ -72,6 +72,16 @@ def _get(path: str, params: dict | None = None):
         return None
 
 
+def _delete(path: str):
+    try:
+        resp = requests.delete(f"{API_BASE}{path}", timeout=5)
+        resp.raise_for_status()
+        return resp.json()
+    except requests.RequestException as exc:
+        st.error(f"API error ({path}): {exc}")
+        return None
+
+
 def _fmt(seconds: float) -> str:
     """Format seconds as '2h 15m' or '45s'."""
     s = int(seconds)
@@ -97,6 +107,17 @@ with st.sidebar:
 # ── Route: read query params ────────────────────────────────────────
 _qp = st.query_params
 selected_user_id = _qp.get("user_id", None)
+_delete_uid = _qp.get("delete_user", None)
+
+# ── Handle delete action ────────────────────────────────────────────
+if _delete_uid:
+    result = _delete(f"/admin/user/{_delete_uid}")
+    if result:
+        st.success(f"Deleted {result.get('deleted', 0)} events for **{_delete_uid}**.")
+    st.query_params.clear()
+    import time as _time
+    _time.sleep(1.5)
+    st.rerun()
 
 
 # =====================================================================
@@ -253,7 +274,7 @@ _header = (
     "<th>User</th>"
     "<th>Non-Productive %</th><th>Productive %</th>"
     "<th>Non-Productive Time</th><th>Productive Time</th>"
-    "<th>Total Time</th><th></th>"
+    "<th>Total Time</th><th></th><th></th>"
     "</tr>"
 )
 
@@ -273,6 +294,10 @@ for entry in leaderboard:
         f'<td><a href="?user_id={uid}" target="_self"'
         f' style="color:{tc}; font-weight:bold; text-decoration:underline;">'
         f"View</a></td>"
+        f'<td><a href="?delete_user={uid}" target="_self"'
+        f' style="color:#ef4444; font-weight:bold; text-decoration:underline;"'
+        f' onclick="return confirm(\'Delete all data for {uid}?\');">'
+        f"Delete</a></td>"
         f"</tr>"
     )
 

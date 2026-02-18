@@ -392,6 +392,15 @@ def _register_routes(app: Flask) -> None:
         np_apps.sort(key=lambda r: r["seconds"], reverse=True)
         return jsonify(np_apps), 200
 
+    # ── DELETE /admin/user/<user_id> ────────────────────────────
+    @app.route("/admin/user/<user_id>", methods=["DELETE"])
+    def admin_delete_user(user_id: str):
+        """Delete all telemetry events for a given user."""
+        count = TelemetryEvent.query.filter_by(user_id=user_id).delete()
+        db.session.commit()
+        logger.info("Deleted %d events for user %r.", count, user_id)
+        return jsonify({"deleted": count, "user_id": user_id}), 200
+
     # ── GET /health ─────────────────────────────────────────────
     @app.route("/health", methods=["GET"])
     def health():

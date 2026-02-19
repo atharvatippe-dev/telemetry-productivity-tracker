@@ -214,6 +214,7 @@ def _send_batch(events: list[dict]) -> bool:
         resp = requests.post(
             f"{BACKEND_URL}/track",
             json={"events": events},
+            headers={"ngrok-skip-browser-warning": "1"},
             timeout=5,
         )
         if resp.status_code == 201:

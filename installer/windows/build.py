@@ -57,16 +57,13 @@ def main() -> None:
         "installer.windows.setup_gui",
         "installer.windows.autostart",
         "installer.windows.build_config",
-        "pynput",
-        "pynput.keyboard",
-        "pynput.mouse",
-        "pynput.keyboard._win32",
-        "pynput.mouse._win32",
         "psutil",
         "win32gui",
         "win32process",
         "win32api",
         "win32con",
+        "ctypes",
+        "ctypes.wintypes",
     ]
     hidden_args = []
     for h in hidden:

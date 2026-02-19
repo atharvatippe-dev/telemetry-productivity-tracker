@@ -297,7 +297,7 @@ for entry in leaderboard:
         f"View</a>"
         f' &nbsp;|&nbsp; '
         f'<a href="?delete_user={uid}" target="_self"'
-        f' style="color:#ff6b6b; font-weight:bold; text-decoration:underline;"'
+        f' style="color:#FFFFFF; font-weight:bold; text-decoration:underline;"'
         f' onclick="return confirm(\'Delete all data for {uid}?\');">'
         f"Delete</a>"
         f"</td>"

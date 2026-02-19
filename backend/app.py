@@ -9,6 +9,7 @@ GET  /apps[?user_id=]                    — per-app breakdown for today
 GET  /daily?days=7[&user_id=]            — daily time-series of state totals
 POST /cleanup                            — manually purge old events
 GET  /db-stats                           — database size and retention info
+GET  /dashboard/<user_id>                — self-contained HTML dashboard for a user
 GET  /health                             — simple health check
 GET  /admin/leaderboard                  — all users sorted by non-productive %
 GET  /admin/user/<user_id>/non-productive-apps — non-productive apps for a user today
@@ -20,7 +21,7 @@ import logging
 from datetime import datetime, timedelta, timezone, time
 from zoneinfo import ZoneInfo
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 
 from backend.config import Config
@@ -400,6 +401,12 @@ def _register_routes(app: Flask) -> None:
         db.session.commit()
         logger.info("Deleted %d events for user %r.", count, user_id)
         return jsonify({"deleted": count, "user_id": user_id}), 200
+
+    # ── GET /dashboard/<user_id> ─────────────────────────────────
+    @app.route("/dashboard/<user_id>", methods=["GET"])
+    def user_dashboard(user_id: str):
+        """Serve a self-contained HTML dashboard for a specific user."""
+        return render_template("dashboard.html", user_id=user_id)
 
     # ── GET /health ─────────────────────────────────────────────
     @app.route("/health", methods=["GET"])

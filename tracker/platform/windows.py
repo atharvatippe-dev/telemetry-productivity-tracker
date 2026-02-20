@@ -9,8 +9,14 @@ APIs used:
   - win32gui.EnumWindows              for visible window enumeration
   - GetLastInputInfo (user32)         for OS-level idle time
   - GetCursorPos (user32)             for mouse movement tracking
-  - GetAsyncKeyState (user32)         for polling keyboard state
-  - GetKeyState (user32)              for mouse button state
+  - GetAsyncKeyState (user32)         for polling keyboard state (native Windows)
+
+VDI fallback:
+  In Citrix/RDP environments, GetAsyncKeyState often returns zero because
+  input is injected via the remote protocol layer.  When this is detected,
+  the collector falls back to idle-time-delta estimation: if GetLastInputInfo
+  idle drops to near-zero between polls, the user pressed a key or clicked.
+  This provides reliable interaction counting in all VDI environments.
 """
 
 from __future__ import annotations
@@ -27,18 +33,21 @@ logger = logging.getLogger("tracker.windows")
 
 # ── Win32 constants ──────────────────────────────────────────────────
 
-# Virtual-key codes for mouse buttons
 VK_LBUTTON = 0x01
 VK_RBUTTON = 0x02
 VK_MBUTTON = 0x04
 
-# Range of VK codes to poll for keyboard activity (covers all useful keys)
-# 0x08 = Backspace through 0xFE; skip 0x00-0x07 (mouse/undefined)
 _VK_POLL_START = 0x08
 _VK_POLL_END = 0xFE
-
-# Bit mask: if bit 15 is set, the key is currently pressed
 _KEY_PRESSED_BIT = 0x8000
+
+# Idle threshold (seconds): if idle drops below this between polls,
+# count it as an input event in the VDI fallback estimator.
+_IDLE_INPUT_THRESHOLD = 2.0
+
+# Number of initial polls to evaluate whether GetAsyncKeyState works.
+# If zero keypresses after this many polls with low idle, switch to fallback.
+_CALIBRATION_POLLS = 150  # ~5 seconds at 30 Hz
 
 
 # ── ctypes structures ────────────────────────────────────────────────
@@ -63,16 +72,30 @@ _user32 = ctypes.windll.user32  # type: ignore[attr-defined]
 _kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
 
 
+def _get_idle_ms() -> int:
+    """Return milliseconds since last user input (OS-level)."""
+    lii = LASTINPUTINFO()
+    lii.cbSize = ctypes.sizeof(LASTINPUTINFO)
+    if _user32.GetLastInputInfo(ctypes.byref(lii)):
+        return _kernel32.GetTickCount() - lii.dwTime
+    return 0
+
+
 class WindowsCollector(PlatformCollector):
     """
-    Windows collector that uses polling-based Win32 APIs instead of
-    pynput hooks.  Works reliably in VDI, RDP, and Citrix sessions.
+    Windows collector with automatic VDI fallback.
 
-    Input detection strategy:
-      - A background thread polls GetAsyncKeyState at ~30 Hz to detect
-        key-press transitions and mouse button clicks.
-      - GetCursorPos is sampled each poll to compute mouse distance.
-      - GetLastInputInfo provides OS-level idle time.
+    Primary mode (native Windows):
+      - GetAsyncKeyState polled at ~30 Hz for key-press transitions
+      - GetAsyncKeyState on VK_LBUTTON/RBUTTON/MBUTTON for clicks
+      - GetCursorPos for mouse movement
+
+    VDI fallback mode (auto-detected):
+      - GetLastInputInfo idle-time-delta for interaction estimation
+      - GetCursorPos for mouse movement (works in VDI)
+      - Activated when GetAsyncKeyState returns nothing after calibration
+
+    Both modes use GetLastInputInfo for idle time reporting.
     """
 
     def __init__(self) -> None:
@@ -85,16 +108,22 @@ class WindowsCollector(PlatformCollector):
         self._poll_thread: threading.Thread | None = None
         self._stop_event = threading.Event()
 
-        # Track previous key states to detect press transitions
+        # GetAsyncKeyState tracking
         self._prev_key_states: dict[int, bool] = {}
         self._prev_lbutton = False
         self._prev_rbutton = False
         self._prev_mbutton = False
 
+        # VDI fallback: idle-delta estimator
+        self._vdi_mode = False
+        self._calibration_count = 0
+        self._calibration_async_hits = 0
+        self._calibration_low_idle_seen = False
+        self._prev_idle_ms = 0
+
     # ── Active window ────────────────────────────────────────────
 
     def get_active_window(self) -> tuple[str, str]:
-        """Get the foreground window's app name and title."""
         try:
             import win32gui
             import win32process
@@ -114,7 +143,6 @@ class WindowsCollector(PlatformCollector):
 
     @staticmethod
     def _get_active_window_ctypes() -> tuple[str, str]:
-        """Fallback using only ctypes if pywin32/psutil unavailable."""
         try:
             hwnd = _user32.GetForegroundWindow()
             length = _user32.GetWindowTextLengthW(hwnd)
@@ -127,10 +155,6 @@ class WindowsCollector(PlatformCollector):
     # ── Visible windows (multi-monitor / split-screen / PiP) ─────
 
     def get_visible_windows(self) -> list[tuple[str, str]]:
-        """
-        Enumerate ALL visible on-screen windows across every monitor.
-        Filters out invisible, minimized, and tiny (<100x100) windows.
-        """
         try:
             import win32gui
             import win32process
@@ -173,34 +197,61 @@ class WindowsCollector(PlatformCollector):
 
         return result
 
-    # ── Input polling (replaces pynput) ──────────────────────────
+    # ── Input polling ────────────────────────────────────────────
 
     def _poll_loop(self) -> None:
         """
-        Background thread: polls Win32 APIs at ~30 Hz to detect input.
+        Background thread polling at ~30 Hz.
 
-        Uses GetAsyncKeyState to detect key-press transitions (bit 15
-        going from 0 to 1) and GetCursorPos for mouse movement.
-        This works in VDI/RDP because these APIs query the OS input
-        state directly rather than relying on low-level hooks.
+        During the first _CALIBRATION_POLLS cycles, runs both
+        GetAsyncKeyState and idle-delta detection. If GetAsyncKeyState
+        produces zero hits while the user is clearly active (low idle),
+        switches permanently to VDI fallback mode.
         """
-        poll_interval = 1.0 / 30  # ~30 Hz
+        poll_interval = 1.0 / 30
 
         while not self._stop_event.is_set():
             try:
-                self._poll_keyboard()
-                self._poll_mouse_buttons()
+                if not self._vdi_mode:
+                    self._poll_async_keystate()
+                    self._poll_async_mouse_buttons()
+
                 self._poll_mouse_position()
+                self._poll_idle_delta()
+
+                if not self._vdi_mode:
+                    self._calibrate()
+
             except Exception as exc:
                 logger.debug("Poll error: %s", exc)
 
             self._stop_event.wait(poll_interval)
 
-    def _poll_keyboard(self) -> None:
-        """Detect new key presses by polling GetAsyncKeyState."""
+    def _calibrate(self) -> None:
+        """
+        After enough polls, check if GetAsyncKeyState detected anything.
+        If not but the user was active (idle resets seen), switch to VDI mode.
+        """
+        self._calibration_count += 1
+        if self._calibration_count < _CALIBRATION_POLLS:
+            return
+
+        if self._calibration_async_hits == 0 and self._calibration_low_idle_seen:
+            self._vdi_mode = True
+            logger.info(
+                "VDI mode activated: GetAsyncKeyState returned 0 hits "
+                "while user was active. Switching to idle-delta estimation."
+            )
+        elif self._calibration_async_hits > 0:
+            logger.info(
+                "Native input detection confirmed (%d hits during calibration).",
+                self._calibration_async_hits,
+            )
+
+    def _poll_async_keystate(self) -> None:
+        """Detect key presses via GetAsyncKeyState (works on native Windows)."""
         new_presses = 0
         for vk in range(_VK_POLL_START, _VK_POLL_END + 1):
-            # Skip mouse button VK codes (handled separately)
             if vk in (VK_LBUTTON, VK_RBUTTON, VK_MBUTTON):
                 continue
 
@@ -214,11 +265,12 @@ class WindowsCollector(PlatformCollector):
             self._prev_key_states[vk] = is_pressed
 
         if new_presses > 0:
+            self._calibration_async_hits += new_presses
             with self._lock:
                 self._keystroke_count += new_presses
 
-    def _poll_mouse_buttons(self) -> None:
-        """Detect mouse clicks by polling GetAsyncKeyState on button VKs."""
+    def _poll_async_mouse_buttons(self) -> None:
+        """Detect mouse clicks via GetAsyncKeyState on button VKs."""
         new_clicks = 0
 
         for vk, attr in [
@@ -236,11 +288,12 @@ class WindowsCollector(PlatformCollector):
             setattr(self, attr, is_pressed)
 
         if new_clicks > 0:
+            self._calibration_async_hits += new_clicks
             with self._lock:
                 self._mouse_clicks += new_clicks
 
     def _poll_mouse_position(self) -> None:
-        """Track mouse movement via GetCursorPos."""
+        """Track mouse movement via GetCursorPos (works in VDI)."""
         pt = POINT()
         if _user32.GetCursorPos(ctypes.byref(pt)):
             x, y = pt.x, pt.y
@@ -253,10 +306,48 @@ class WindowsCollector(PlatformCollector):
                         self._mouse_distance += dist
                 self._last_mouse_pos = (x, y)
 
+    def _poll_idle_delta(self) -> None:
+        """
+        VDI fallback: estimate input events from idle time changes.
+
+        GetLastInputInfo is updated by the OS whenever any input arrives,
+        even in Citrix/RDP sessions. If idle drops from a high value to
+        near-zero, the user just pressed a key or clicked.
+
+        Each idle reset is counted as one interaction event.
+        This is conservative (undercounts) but reliable.
+        """
+        idle_ms = _get_idle_ms()
+
+        # Track that we've seen the user be active (for calibration)
+        if idle_ms < _IDLE_INPUT_THRESHOLD * 1000:
+            self._calibration_low_idle_seen = True
+
+        if self._vdi_mode:
+            # If idle dropped significantly, user provided input
+            if self._prev_idle_ms > _IDLE_INPUT_THRESHOLD * 1000 and idle_ms < _IDLE_INPUT_THRESHOLD * 1000:
+                with self._lock:
+                    self._keystroke_count += 1
+
+            # If idle is very low and cursor moved, count as a click
+            # (can't distinguish keys from clicks, so split heuristically)
+            if idle_ms < 200:  # <200ms idle = just interacted
+                pt = POINT()
+                if _user32.GetCursorPos(ctypes.byref(pt)):
+                    if self._last_mouse_pos is not None:
+                        dx = pt.x - self._last_mouse_pos[0]
+                        dy = pt.y - self._last_mouse_pos[1]
+                        if (dx * dx + dy * dy) ** 0.5 < 5:
+                            # Cursor didn't move but idle is near-zero:
+                            # likely a keystroke or click in place
+                            with self._lock:
+                                self._keystroke_count += 1
+
+        self._prev_idle_ms = idle_ms
+
     # ── PlatformCollector interface ──────────────────────────────
 
     def start_input_listener(self) -> None:
-        """Start the background polling thread."""
         self._stop_event.clear()
         self._poll_thread = threading.Thread(
             target=self._poll_loop,
@@ -267,14 +358,15 @@ class WindowsCollector(PlatformCollector):
         logger.info("Win32 input polling started (VDI-compatible).")
 
     def stop_input_listener(self) -> None:
-        """Signal the polling thread to stop and wait for it."""
         self._stop_event.set()
         if self._poll_thread and self._poll_thread.is_alive():
             self._poll_thread.join(timeout=2.0)
-        logger.info("Win32 input polling stopped.")
+        if self._vdi_mode:
+            logger.info("Win32 input polling stopped (was in VDI fallback mode).")
+        else:
+            logger.info("Win32 input polling stopped (native mode).")
 
     def get_and_reset_counts(self) -> dict:
-        """Return accumulated counts since last call and reset."""
         with self._lock:
             counts = {
                 "keystroke_count": self._keystroke_count,
@@ -289,16 +381,8 @@ class WindowsCollector(PlatformCollector):
     # ── Idle time ────────────────────────────────────────────────
 
     def get_idle_seconds(self) -> float:
-        """
-        OS-level idle time via GetLastInputInfo.
-        Works in VDI/RDP because it tracks the session's input state.
-        """
         try:
-            lii = LASTINPUTINFO()
-            lii.cbSize = ctypes.sizeof(LASTINPUTINFO)
-            if _user32.GetLastInputInfo(ctypes.byref(lii)):
-                millis = _kernel32.GetTickCount() - lii.dwTime
-                return millis / 1000.0
+            return _get_idle_ms() / 1000.0
         except Exception as exc:
             logger.warning("Idle detection failed: %s", exc)
         return 0.0

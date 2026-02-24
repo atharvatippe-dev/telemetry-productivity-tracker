@@ -1,5 +1,5 @@
 """
-First-launch setup GUI for the Telemetry Tracker (Windows).
+First-launch setup GUI for Zinnia Axion (Windows).
 
 Displays a small Tkinter window asking for the employee's User ID.
 The backend URL is pre-configured by the admin at build time.
@@ -46,7 +46,7 @@ def write_config(user_id: str, backend_url: str) -> None:
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
 
     lines = [
-        "# Telemetry Tracker Configuration (Windows)",
+        "# Zinnia Axion Configuration (Windows)",
         f"USER_ID={user_id}",
         f"BACKEND_URL={backend_url}",
         "",
@@ -73,7 +73,7 @@ def show_setup(on_complete: callable = None) -> None:
     """Show the setup window. Calls on_complete() after config is saved."""
 
     root = tk.Tk()
-    root.title("Telemetry Tracker - Setup")
+    root.title("Zinnia Axion - Setup")
     root.geometry("440x220")
     root.resizable(False, False)
 
@@ -84,7 +84,7 @@ def show_setup(on_complete: callable = None) -> None:
     root.geometry(f"440x220+{x}+{y}")
 
     tk.Label(
-        root, text="Telemetry Tracker Setup", font=("Segoe UI", 14, "bold")
+        root, text="Zinnia Axion Setup", font=("Segoe UI", 14, "bold")
     ).pack(pady=(20, 5))
 
     tk.Label(

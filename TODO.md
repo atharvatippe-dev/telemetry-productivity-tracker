@@ -1,38 +1,38 @@
-# Productivity Tracker — Known Loopholes & Future Improvements
+# Zinnia Axion — Known Loopholes & Future Improvements
 
 ## HIGH Severity
 
 ### 1. ~~Multi-Monitor Blind Spot~~ SOLVED
-- **Problem:** Tracker only captures the active/foreground window. YouTube on Monitor 1 + Cursor (focused) on Monitor 2 = tracker sees only Cursor = productive.
-- **Fix:** Added `get_visible_windows()` using `CGWindowListCopyWindowInfo` to enumerate ALL on-screen windows across monitors. Tracker checks each visible window against `NON_PRODUCTIVE_APPS` and sets `distraction_visible=True` on the sample. Productivity engine blocks the "active presence" (reading) pathway when distraction ratio ≥ `DISTRACTION_MIN_RATIO` (30%). Genuine typing/clicking still counts as productive but with a confidence penalty.
+- **Problem:** Zinnia Axion Agent only captures the active/foreground window. YouTube on Monitor 1 + Cursor (focused) on Monitor 2 = Zinnia Axion Agent sees only Cursor = productive.
+- **Fix:** Added `get_visible_windows()` using `CGWindowListCopyWindowInfo` to enumerate ALL on-screen windows across monitors. Zinnia Axion Agent checks each visible window against `NON_PRODUCTIVE_APPS` and sets `distraction_visible=True` on the sample. Productivity engine blocks the "active presence" (reading) pathway when distraction ratio ≥ `DISTRACTION_MIN_RATIO` (30%). Genuine typing/clicking still counts as productive but with a confidence penalty.
 - **Status:** DONE
 
 ### 2. ~~Meetings / Calls Misclassified~~ SOLVED
-- **Problem:** Zoom/Teams/Meet calls where you're actively participating but not typing or clicking. Tracker sees zero interaction = non-productive. But meetings ARE work.
+- **Problem:** Zoom/Teams/Meet calls where you're actively participating but not typing or clicking. Zinnia Axion Agent sees zero interaction = non-productive. But meetings ARE work.
 - **Fix:** Added `MEETING_APPS` list in `.env`. Meeting apps are always classified as productive (Rule 2 in decision tree).
 - **Status:** DONE
 
 ## MEDIUM-HIGH Severity
 
 ### 3. ~~Split-Screen / Side-by-Side~~ SOLVED
-- **Problem:** macOS Split View — Cursor on left, Safari (YouTube) on right. Only the last-clicked pane is "active." YouTube occupies 50% of screen but is invisible to the tracker.
+- **Problem:** macOS Split View — Cursor on left, Safari (YouTube) on right. Only the last-clicked pane is "active." YouTube occupies 50% of screen but is invisible to the Zinnia Axion Agent.
 - **Fix:** Same mechanism as multi-monitor (Loophole 1). `CGWindowListCopyWindowInfo` sees both split-view panes. Non-productive pane triggers `distraction_visible` flag.
 - **Status:** DONE
 
 ### 4. ~~Privacy Risk — Window Titles~~ SOLVED
 - **Problem:** Window titles leak sensitive data: email subjects, document names, private URLs. Stored in plaintext in SQLite.
-- **Fix:** Added `WINDOW_TITLE_MODE` in `.env` with 3 modes: `full` (default, unchanged), `redacted` (keeps only classification keywords like "youtube"/"zoom", strips everything else), `off` (no titles). Redaction happens at the tracker before data is transmitted.
+- **Fix:** Added `WINDOW_TITLE_MODE` in `.env` with 3 modes: `full` (default, unchanged), `redacted` (keeps only classification keywords like "youtube"/"zoom", strips everything else), `off` (no titles). Redaction happens at the Zinnia Axion Agent before data is transmitted.
 - **Status:** DONE
 
 ## MEDIUM Severity
 
 ### 5. Browser Background Tabs
-- **Problem:** YouTube playing audio in a background tab. Active tab is work-related. Tracker only sees the active tab's title.
+- **Problem:** YouTube playing audio in a background tab. Active tab is work-related. Zinnia Axion Agent only sees the active tab's title.
 - **Fix:** Would require a browser extension to enumerate all tabs. Impractical without one.
 - **Effort:** HIGH (requires browser extension)
 
 ### 6. ~~Picture-in-Picture (PiP)~~ SOLVED
-- **Problem:** YouTube PiP playing in a corner while coding. PiP is not the active window — tracker doesn't see it.
+- **Problem:** YouTube PiP playing in a corner while coding. PiP is not the active window — Zinnia Axion Agent doesn't see it.
 - **Fix:** Same mechanism as multi-monitor (Loophole 1). `CGWindowListCopyWindowInfo` lists PiP windows alongside regular windows. The 100×100 px minimum-size filter keeps the PiP window (typically ~300×170) while excluding tiny UI elements.
 - **Status:** DONE
 
@@ -61,12 +61,12 @@
 ## LOW Severity
 
 ### 11. ~~Sleep / Hibernate / Lid Close~~ SOLVED
-- **Problem:** When laptop sleeps, tracker process is suspended. On wake, there's a gap in data. First sample after wake may have huge `idle_seconds` (equal to the entire sleep duration), polluting the first post-wake bucket.
-- **Fix:** Two-layer defence: (1) Tracker compares wall-clock time between iterations; if gap > `WAKE_THRESHOLD_SEC` (30s), it logs the wake, flushes the pre-sleep batch, resets stale input counters, and **skips the first post-wake sample** (the one with inflated idle). (2) Productivity engine defensively caps `max_idle` per sample at `bucket_size` — even if an inflated value sneaks through, it can't destroy the confidence score.
+- **Problem:** When laptop sleeps, Zinnia Axion Agent process is suspended. On wake, there's a gap in data. First sample after wake may have huge `idle_seconds` (equal to the entire sleep duration), polluting the first post-wake bucket.
+- **Fix:** Two-layer defence: (1) Zinnia Axion Agent compares wall-clock time between iterations; if gap > `WAKE_THRESHOLD_SEC` (30s), it logs the wake, flushes the pre-sleep batch, resets stale input counters, and **skips the first post-wake sample** (the one with inflated idle). (2) Productivity engine defensively caps `max_idle` per sample at `bucket_size` — even if an inflated value sneaks through, it can't destroy the confidence score.
 - **Status:** DONE
 
 ### 12. Remote Desktop / VMs
-- **Problem:** Remote Desktop app (Parsec, RDP, VNC) shows as active app. Tracker has no visibility into what's running inside the remote session.
+- **Problem:** Remote Desktop app (Parsec, RDP, VNC) shows as active app. Zinnia Axion Agent has no visibility into what's running inside the remote session.
 - **Fix:** Edge case — not worth solving unless remote work is primary workflow.
 - **Effort:** LOW (niche)
 

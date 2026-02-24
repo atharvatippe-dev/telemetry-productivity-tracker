@@ -1,5 +1,5 @@
 """
-Streamlit Admin Dashboard — Central Productivity Leaderboard.
+Zinnia Axion Admin Dashboard — Central Productivity Leaderboard.
 
 Two-page layout driven by URL query parameters:
   Page 1 (default)  — Leaderboard table with "View" links per user
@@ -14,11 +14,16 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+import time as _time_module
+from datetime import datetime
+
 import requests
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 from dotenv import load_dotenv
+
+from ai_summary import get_summary, OPENAI_API_KEY
 
 # Load .env from project root
 _project_root = Path(__file__).resolve().parent.parent
@@ -28,7 +33,7 @@ API_BASE = os.getenv("API_BASE_URL", "http://127.0.0.1:5000")
 
 # ── Page config ─────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="Admin — Productivity Dashboard",
+    page_title="Admin — Zinnia Axion Dashboard",
     page_icon="🏢",
     layout="wide",
     initial_sidebar_state="collapsed",
@@ -115,8 +120,7 @@ if _delete_uid:
     if result:
         st.success(f"Deleted {result.get('deleted', 0)} events for **{_delete_uid}**.")
     st.query_params.clear()
-    import time as _time
-    _time.sleep(1.5)
+    _time_module.sleep(1.5)
     st.rerun()
 
 
@@ -137,47 +141,48 @@ if selected_user_id:
     np_apps = _get(f"/admin/user/{selected_user_id}/non-productive-apps")
     daily_data = _get("/daily", {"days": 7, "user_id": selected_user_id})
 
-    if not summary or summary.get("total_seconds", 0) == 0:
-        st.info(f"No data for {selected_user_id} today.")
-        st.stop()
+    _has_today = summary and summary.get("total_seconds", 0) > 0
 
-    total = summary.get("total_seconds", 1)
-    productive = summary.get("productive", 0)
-    non_productive = summary.get("non_productive", 0)
-    prod_pct = round(productive / total * 100, 1) if total else 0
-    non_prod_pct = round(non_productive / total * 100, 1) if total else 0
+    if _has_today:
+        total = summary.get("total_seconds", 1)
+        productive = summary.get("productive", 0)
+        non_productive = summary.get("non_productive", 0)
+        prod_pct = round(productive / total * 100, 1) if total else 0
+        non_prod_pct = round(non_productive / total * 100, 1) if total else 0
 
-    # ── ROW 1 — Summary metrics ─────────────────────────────────
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Non-Productive %", f"{non_prod_pct}%")
-    m2.metric("Productive %", f"{prod_pct}%")
-    m3.metric("Non-Productive Time", _fmt(non_productive))
-    m4.metric("Total Tracked", _fmt(total))
+        # ── ROW 1 — Summary metrics ─────────────────────────────────
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("Non-Productive %", f"{non_prod_pct}%")
+        m2.metric("Productive %", f"{prod_pct}%")
+        m3.metric("Non-Productive Time", _fmt(non_productive))
+        m4.metric("Total Tracked", _fmt(total))
 
-    # ── ROW 2 — Non-productive app breakdown ────────────────────
-    st.caption(f"Non-Productive Apps — {selected_user_id} (Today)")
+        # ── ROW 2 — Non-productive app breakdown ────────────────────
+        st.caption(f"Non-Productive Apps — {selected_user_id} (Today)")
 
-    if np_apps and len(np_apps) > 0:
-        df_np = pd.DataFrame(np_apps)
-        df_np["Duration"] = df_np["seconds"].apply(_fmt)
-        df_np = df_np.sort_values("seconds", ascending=True)
+        if np_apps and len(np_apps) > 0:
+            df_np = pd.DataFrame(np_apps)
+            df_np["Duration"] = df_np["seconds"].apply(_fmt)
+            df_np = df_np.sort_values("seconds", ascending=True)
 
-        fig_np = px.bar(
-            df_np, y="app_name", x="seconds", orientation="h",
-            text="Duration",
-            color_discrete_sequence=["#ef4444"],
-        )
-        fig_np.update_traces(textposition="outside")
-        fig_np.update_layout(
-            yaxis={"title": "", "automargin": True},
-            xaxis_title="seconds",
-            margin=dict(t=5, b=5, l=10, r=5),
-            height=max(180, len(df_np) * 30 + 60),
-            showlegend=False,
-        )
-        st.plotly_chart(fig_np, use_container_width=True)
+            fig_np = px.bar(
+                df_np, y="app_name", x="seconds", orientation="h",
+                text="Duration",
+                color_discrete_sequence=["#ef4444"],
+            )
+            fig_np.update_traces(textposition="outside")
+            fig_np.update_layout(
+                yaxis={"title": "", "automargin": True},
+                xaxis_title="seconds",
+                margin=dict(t=5, b=5, l=10, r=5),
+                height=max(180, len(df_np) * 30 + 60),
+                showlegend=False,
+            )
+            st.plotly_chart(fig_np, use_container_width=True)
+        else:
+            st.success(f"{selected_user_id} has no non-productive app usage today.")
     else:
-        st.success(f"{selected_user_id} has no non-productive app usage today.")
+        st.info(f"No data for {selected_user_id} today.")
 
     # ── ROW 3 — 7-day daily trend line graph ────────────────────
     st.caption(f"7-Day Trend — {selected_user_id}")
@@ -208,8 +213,7 @@ if selected_user_id:
     st.caption("Admin view — data refreshes automatically.")
 
     if auto_refresh:
-        import time as _time
-        _time.sleep(10)
+        _time_module.sleep(10)
         st.rerun()
 
     st.stop()
@@ -218,7 +222,7 @@ if selected_user_id:
 # =====================================================================
 #  PAGE 1 — Leaderboard View  (default, no ?user_id=)
 # =====================================================================
-st.header("Admin Dashboard — Productivity Leaderboard")
+st.header("Zinnia Axion — Admin Leaderboard")
 
 # ── Fetch leaderboard ───────────────────────────────────────────────
 leaderboard = _get("/admin/leaderboard")
@@ -238,6 +242,44 @@ m1.metric("Total Users", total_users)
 m2.metric("Avg Productive", f"{avg_prod:.1f}%")
 m3.metric("Avg Non-Productive", f"{avg_non_prod:.1f}%")
 m4.metric("Total Tracked", _fmt(total_tracked))
+
+# ═══════════════════════════════════════════════════════════════════
+#  AI SUMMARY — Team Productivity Insights (above leaderboard)
+# ═══════════════════════════════════════════════════════════════════
+
+_ai_enabled = st.sidebar.checkbox(
+    "AI Summary",
+    value=bool(OPENAI_API_KEY),
+    help="Enable AI-generated team insights (requires OPENAI_API_KEY in .env)",
+)
+
+if _ai_enabled and len(leaderboard) >= 1:
+    import ai_summary as _ai_mod
+
+    if st.session_state.get("_regen_ai"):
+        _ai_mod._cached_at = 0
+        st.session_state["_regen_ai"] = False
+
+    with st.container():
+        st.subheader("AI Summary: Team Productivity Insights")
+        with st.spinner("Generating summary..."):
+            _summary_text, _is_ai = get_summary(leaderboard)
+        st.markdown(_summary_text)
+
+        _col_ts, _col_btn, _col_badge = st.columns([3, 1, 1])
+        with _col_ts:
+            st.caption(f"Last updated at {datetime.now().strftime('%H:%M:%S')}")
+        with _col_btn:
+            if st.button("Regenerate", key="regen_ai"):
+                _ai_mod._cached_at = 0
+                st.session_state["_regen_ai"] = True
+                st.rerun()
+        with _col_badge:
+            if _is_ai:
+                st.caption("Powered by OpenAI")
+            else:
+                st.caption("Heuristic summary (no API key)")
+        st.divider()
 
 # ═══════════════════════════════════════════════════════════════════
 #  ROW 2 — Leaderboard table (sorted: highest non-productive first)
@@ -325,6 +367,5 @@ st.caption("Admin view — data refreshes automatically.")
 
 # ── Auto-refresh ────────────────────────────────────────────────────
 if auto_refresh:
-    import time as _time
-    _time.sleep(10)
+    _time_module.sleep(10)
     st.rerun()

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Productivity Tracker - {{ user_id }}</title>
+<title>Zinnia Axion - {{ user_id }}</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -56,7 +56,7 @@
 <body>
 
 <div class="refresh-bar">
-  <h1>Productivity Tracker - {{ user_id }}</h1>
+  <h1>Zinnia Axion - {{ user_id }}</h1>
   <button class="refresh-btn" onclick="location.reload()">Refresh</button>
 </div>
 
@@ -98,7 +98,7 @@ async function load() {
 
     const total = summary.total_seconds || 0;
     if (total === 0) {
-      el.innerHTML = '<div class="no-data">No data for today yet. Make sure the tracker is running.</div>';
+      el.innerHTML = '<div class="no-data">No data for today yet. Make sure Zinnia Axion Agent is running.</div>';
       return;
     }
 

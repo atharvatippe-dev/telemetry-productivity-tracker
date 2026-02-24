@@ -1,12 +1,12 @@
 """
-Launcher - entry point for the bundled Telemetry Tracker .exe (Windows).
+Launcher - entry point for the bundled Zinnia Axion .exe (Windows).
 
 Flow:
   1. Check if %USERPROFILE%\\.telemetry-tracker\\config.env exists
   2. If not → show setup GUI (first launch)
   3. Load config.env into environment
   4. Install Task Scheduler auto-start entry (idempotent)
-  5. Start the tracker agent
+  5. Start the Zinnia Axion Agent
 """
 
 from __future__ import annotations
@@ -85,10 +85,7 @@ def main() -> None:
     _load_config_env()
     logger.info("Config loaded. User ID: %s", os.environ.get("USER_ID", "unknown"))
 
-    # Step 3: Install auto-start (idempotent)
-    _install_autostart()
-
-    # Step 4: Start the tracker
+    # Step 3: Start the tracker
     from tracker.agent import main as tracker_main
     tracker_main()
 

@@ -1,6 +1,6 @@
-# Telemetry-Driven Productivity Tracker
+# Zinnia Axion
 
-A privacy-conscious, telemetry-driven productivity tracker that silently records how employees spend their computer time and surfaces the data through real-time dashboards. Deploys as a standalone executable on **macOS** and **Windows** — no Python installation needed on end-user machines.
+A privacy-conscious, telemetry-driven Zinnia Axion that silently records how employees spend their computer time and surfaces the data through real-time dashboards. Deploys as a standalone executable on **macOS** and **Windows** — no Python installation needed on end-user machines.
 
 **Key privacy guarantee:** Only interaction *counts* are recorded — keystroke content is **never** captured.
 
@@ -31,14 +31,14 @@ A privacy-conscious, telemetry-driven productivity tracker that silently records
                           │                                          │
 ┌──────────────┐  POST    │  ┌────────────┐       ┌──────────────┐  │
 │ Employee PC  │  /track  │  │  Flask API  │──────▶│  PostgreSQL  │  │
-│ (Tracker     │─────────▶│  │  (Backend)  │       │   / SQLite   │  │
+│ (Zinnia Axion│─────────▶│  │  (Backend)  │       │   / SQLite   │  │
 │  Agent .exe) │  (JSON)  │  └─────┬──────┘       └──────────────┘  │
 └──────────────┘          │        │ REST                            │
                           │        ▼                                 │
  ┌──────────────┐         │  ┌──────────────┐  ┌─────────────────┐  │
- │ Employee PC  │         │  │  Streamlit   │  │   Streamlit     │  │
- │ (Tracker     │────────▶│  │  User Dash   │  │   Admin Dash    │  │
- │  Agent .exe) │         │  │  :8501       │  │   :8502         │  │
+│ Employee PC  │         │  │  Streamlit   │  │   Streamlit     │  │
+│ (Zinnia Axion│────────▶│  │  User Dash   │  │   Admin Dash    │  │
+│  Agent .exe) │         │  │  :8501       │  │   :8502         │  │
  └──────────────┘         │  └──────────────┘  └─────────────────┘  │
                           │        ▲                                 │
          ...              │        │                                 │
@@ -60,7 +60,7 @@ A privacy-conscious, telemetry-driven productivity tracker that silently records
 | Component | Path | Description |
 |-----------|------|-------------|
 | **Backend** | `backend/` | Flask REST API + SQLAlchemy models + productivity inference engine |
-| **Tracker Agent** | `tracker/` | Local agent collecting active window, keyboard/mouse counts, idle time |
+| **Zinnia Axion Agent** | `tracker/` | Local agent collecting active window, keyboard/mouse counts, idle time |
 | **User Dashboard** | `frontend/dashboard.py` | Streamlit dashboard for personal productivity stats |
 | **Admin Dashboard** | `frontend/admin_dashboard.py` | Streamlit admin panel with leaderboard and per-user drill-down |
 | **HTML Dashboard** | `backend/templates/dashboard.html` | Self-contained Chart.js dashboard served by Flask (no install needed) |
@@ -72,7 +72,7 @@ A privacy-conscious, telemetry-driven productivity tracker that silently records
 
 ## Productivity Model
 
-The tracker uses a **2-state productivity model** (`productive` / `non_productive`) powered by a decision tree in `backend/productivity.py`.
+Zinnia Axion uses a **2-state productivity model** (`productive` / `non_productive`) powered by a decision tree in `backend/productivity.py`.
 
 ### Decision Tree (per 60-second bucket)
 
@@ -101,17 +101,17 @@ Each bucket also runs through anti-cheat checks:
 
 ### Multi-Monitor / Distraction Detection
 
-On macOS, the tracker enumerates ALL visible windows across monitors using `CGWindowListCopyWindowInfo`. If a non-productive app (YouTube, Netflix, etc.) is visible on any monitor while the user is working, the `distraction_visible` flag is set. The productivity engine blocks the "active presence" pathway when the distraction ratio exceeds 30%.
+On macOS, Zinnia Axion enumerates ALL visible windows across monitors using `CGWindowListCopyWindowInfo`. If a non-productive app (YouTube, Netflix, etc.) is visible on any monitor while the user is working, the `distraction_visible` flag is set. The productivity engine blocks the "active presence" pathway when the distraction ratio exceeds 30%.
 
 ---
 
 ## Features
 
-- **Cross-platform:** macOS, Windows, Linux (tracker agent)
+- **Cross-platform:** macOS, Windows, Linux (Zinnia Axion agent)
 - **Standalone executables:** PyInstaller-bundled `.app` (macOS) and `.exe` (Windows) — no Python on employee machines
 - **First-run setup wizard:** Tkinter GUI for user ID and backend URL configuration
 - **Auto-start on boot:** macOS LaunchAgent / Windows Task Scheduler (with Startup folder fallback)
-- **Offline resilience:** Tracker buffers events locally (JSON file) when the backend is unreachable
+- **Offline resilience:** Zinnia Axion Agent buffers events locally (JSON file) when the backend is unreachable
 - **Sleep/wake handling:** Detects laptop sleep, flushes pre-sleep data, skips inflated post-wake samples
 - **Ghost app filtering:** Suppresses duplicate events when no actual app change occurred
 - **Window title redaction:** 3 modes — `full`, `redacted` (keeps only classification keywords), `off`
@@ -127,7 +127,7 @@ On macOS, the tracker enumerates ALL visible windows across monitors using `CGWi
 ## Project Structure
 
 ```
-telemetry-productivity-tracker/
+zinnia-axion/
 ├── .env.example                        # Template configuration (all settings documented)
 ├── .github/
 │   └── workflows/
@@ -135,7 +135,7 @@ telemetry-productivity-tracker/
 ├── README.md                           # This file
 ├── TODO.md                             # Known loopholes & future improvements
 ├── UNINSTALL.md                        # Uninstall instructions (Windows & macOS)
-├── TelemetryTracker.spec               # PyInstaller spec for macOS .app
+├── ZinniaAxion.spec                    # PyInstaller spec for macOS .app
 ├── architecture.svg                    # Architecture diagram
 ├── requirements.txt                    # Core Python dependencies
 ├── requirements-macos.txt              # macOS-specific (pyobjc)
@@ -195,8 +195,8 @@ telemetry-productivity-tracker/
 ### 1. Clone & Install
 
 ```bash
-git clone https://github.com/atharvatippe-dev/telemetry-productivity-tracker.git
-cd telemetry-productivity-tracker
+git clone https://github.com/atharvatippe-dev/zinnia-axion.git
+cd zinnia-axion
 
 python -m venv .venv
 source .venv/bin/activate          # macOS/Linux
@@ -225,7 +225,7 @@ python -m backend.app
 
 The Flask API starts on `http://127.0.0.1:5000`.
 
-### 4. Start the Tracker Agent
+### 4. Start the Zinnia Axion Agent
 
 ```bash
 python -m tracker.agent
@@ -249,7 +249,7 @@ streamlit run frontend/admin_dashboard.py --server.port 8502
 ngrok http 5000
 ```
 
-Use the ngrok URL as the `BACKEND_URL` for remote trackers.
+Use the ngrok URL as the `BACKEND_URL` for remote Zinnia Axion Agents.
 
 ---
 
@@ -260,8 +260,8 @@ Use the ngrok URL as the `BACKEND_URL` for remote trackers.
 1. Go to **Actions** → **Build Windows Installer** → **Run workflow**
 2. Enter your backend URL (ngrok or server URL) and click **Run workflow**
 3. Wait ~2 minutes for the build to complete
-4. Download the **TelemetryTracker-Windows** artifact (`.zip` file)
-5. Unzip and share the `TelemetryTracker.exe` with employees via email, Slack, or file share
+4. Download the **ZinniaAxion-Windows** artifact (`.zip` file)
+5. Unzip and share the `ZinniaAxion.exe` with employees via email, Slack, or file share
 6. Employee runs the `.exe` → enters their user ID and backend URL in the setup wizard → tracking starts automatically
 
 The `.exe` is fully self-contained (no Python installation required). It auto-starts on boot via Windows Task Scheduler.
@@ -273,7 +273,7 @@ The `.exe` is fully self-contained (no Python installation required). It auto-st
 python installer/mac/build.py
 ```
 
-This produces `dist/TelemetryTracker.app`. Distribute the `.app` to macOS users. It auto-starts on login via a LaunchAgent.
+This produces `dist/ZinniaAxion.app`. Distribute the `.app` to macOS users. It auto-starts on login via a LaunchAgent.
 
 ---
 
@@ -298,7 +298,7 @@ For the admin or local user. Shows:
 
 For employees to view their own stats in a browser. **No installation required** — just visit the URL. Shows the same visualizations as the Streamlit user dashboard using Chart.js with auto-refresh every 30 seconds.
 
-Employees running the tracker can access their dashboard at:
+Employees running Zinnia Axion can access their dashboard at:
 ```
 http://<ngrok-url>/dashboard/<their-user-id>
 ```
@@ -357,11 +357,11 @@ All settings are controlled via the `.env` file (see `.env.example` for full doc
 | `DATA_RETENTION_DAYS` | `14` | Auto-purge events older than N days (0 = keep forever) |
 | `TIMEZONE` | `UTC` | Local timezone for day boundary calculations |
 
-### Tracker Agent
+### Zinnia Axion Agent
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `BACKEND_URL` | `http://127.0.0.1:5000` | URL the tracker POSTs to |
+| `BACKEND_URL` | `http://127.0.0.1:5000` | URL the Zinnia Axion Agent POSTs to |
 | `POLL_INTERVAL_SEC` | `1` | Sampling interval (seconds) |
 | `BATCH_INTERVAL_SEC` | `10` | Batch flush interval (seconds) |
 | `BUFFER_FILE` | `~/.telemetry-tracker/buffer.json` | Local buffer for offline resilience |
@@ -415,7 +415,7 @@ See [UNINSTALL.md](UNINSTALL.md) for detailed step-by-step instructions for both
 - **Windows:** End task → delete scheduled task → delete config folder → delete `.exe` and `.zip`
 - **macOS:** Quit app → unload LaunchAgent → delete config folder → delete `.app`
 
-> Note: Uninstalling the tracker from an employee's machine stops future data collection. Historical data already on the server persists until the admin deletes it via the Admin Dashboard.
+> Note: Uninstalling Zinnia Axion from an employee's machine stops future data collection. Historical data already on the server persists until the admin deletes it via the Admin Dashboard.
 
 ---
 

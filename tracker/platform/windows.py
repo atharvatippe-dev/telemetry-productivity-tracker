@@ -137,9 +137,38 @@ class WindowsCollector(PlatformCollector):
                 app_name = proc.name().replace(".exe", "")
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 app_name = "unknown"
+
+            if app_name.lower() == "applicationframehost":
+                app_name = self._resolve_uwp_app(hwnd, win32gui, win32process, psutil) or app_name
+
             return app_name, window_title
         except ImportError:
             return self._get_active_window_ctypes()
+
+    @staticmethod
+    def _resolve_uwp_app(hwnd, win32gui, win32process, psutil) -> str | None:
+        """Find the real UWP app behind ApplicationFrameHost."""
+        host_pid = win32process.GetWindowThreadProcessId(hwnd)[1]
+        real_app = None
+
+        def _child_callback(child_hwnd, _):
+            nonlocal real_app
+            try:
+                _, child_pid = win32process.GetWindowThreadProcessId(child_hwnd)
+                if child_pid != host_pid and child_pid > 0:
+                    proc = psutil.Process(child_pid)
+                    name = proc.name().replace(".exe", "")
+                    if name.lower() != "applicationframehost":
+                        real_app = name
+            except Exception:
+                pass
+
+        try:
+            win32gui.EnumChildWindows(hwnd, _child_callback, None)
+        except Exception:
+            pass
+
+        return real_app
 
     @staticmethod
     def _get_active_window_ctypes() -> tuple[str, str]:
@@ -187,6 +216,9 @@ class WindowsCollector(PlatformCollector):
                 app_name = proc.name().replace(".exe", "")
             except Exception:
                 app_name = "unknown"
+
+            if app_name.lower() == "applicationframehost":
+                app_name = WindowsCollector._resolve_uwp_app(hwnd, win32gui, win32process, psutil) or app_name
 
             result.append((app_name, title))
 

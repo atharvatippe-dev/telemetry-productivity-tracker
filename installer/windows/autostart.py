@@ -16,7 +16,7 @@ from pathlib import Path
 
 logger = logging.getLogger("tracker.autostart")
 
-TASK_NAME = "TelemetryTracker"
+TASK_NAME = "ZinniaAxion"
 LOG_DIR = Path.home() / ".telemetry-tracker" / "logs"
 
 
@@ -84,7 +84,7 @@ def _install_startup_shortcut() -> None:
         logger.warning("Startup folder not found: %s", startup_dir)
         return
 
-    bat_path = startup_dir / "TelemetryTracker.bat"
+    bat_path = startup_dir / "ZinniaAxion.bat"
     command = _get_command()
 
     bat_path.write_text(
@@ -110,7 +110,7 @@ def uninstall_autostart() -> None:
     startup_dir = Path(os.environ.get(
         "APPDATA", Path.home() / "AppData" / "Roaming"
     )) / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "Startup"
-    bat_path = startup_dir / "TelemetryTracker.bat"
+    bat_path = startup_dir / "ZinniaAxion.bat"
     if bat_path.exists():
         bat_path.unlink()
         logger.info("Startup shortcut removed.")

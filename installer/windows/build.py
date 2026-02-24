@@ -6,7 +6,7 @@ Usage (from project root):
     python installer/windows/build.py
 
 Output:
-    dist/TelemetryTracker.exe
+    dist/ZinniaAxion.exe
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 LAUNCHER = PROJECT_ROOT / "installer" / "windows" / "launcher.py"
 DIST_DIR = PROJECT_ROOT / "dist"
 BUILD_DIR = PROJECT_ROOT / "build"
-APP_NAME = "TelemetryTracker"
+APP_NAME = "ZinniaAxion"
 
 
 def main() -> None:

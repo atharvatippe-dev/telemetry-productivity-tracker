@@ -1,5 +1,5 @@
 """
-Flask application — REST API for the Productivity Tracker.
+Flask application — REST API for Zinnia Axion.
 
 Endpoints
 ---------

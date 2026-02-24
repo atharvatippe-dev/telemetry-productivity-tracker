@@ -1,5 +1,5 @@
 """
-Streamlit dashboard — Productivity Tracker (2-state model).
+Streamlit dashboard — Zinnia Axion (2-state model).
 
 Single-viewport enterprise layout:
   Row 1 — Metric cards (productive, non-productive, total)
@@ -29,7 +29,7 @@ API_BASE = os.getenv("API_BASE_URL", "http://127.0.0.1:5000")
 
 # ── Page config ─────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="Productivity Tracker",
+    page_title="Zinnia Axion Dashboard",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="collapsed",
@@ -114,11 +114,11 @@ apps_data = _get("/apps", _api_params)
 daily_data = _get("/daily", {**_api_params, "days": str(trend_days)})
 
 # ── Header ──────────────────────────────────────────────────────────
-_title = f"Productivity Tracker — {USER_ID}" if USER_ID else "Productivity Tracker — Today's Overview"
+_title = f"Zinnia Axion — {USER_ID}" if USER_ID else "Zinnia Axion — Today's Overview"
 st.header(_title)
 
 if not summary or summary.get("total_seconds", 0) == 0:
-    st.info("No data for today yet. Start the tracker agent to begin collecting.")
+    st.info("No data for today yet. Start the Zinnia Axion Agent to begin collecting.")
     st.stop()
 
 total = summary.get("total_seconds", 1)

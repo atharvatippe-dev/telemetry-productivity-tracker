@@ -1,12 +1,12 @@
 """
-Launcher — entry point for the bundled Telemetry Tracker .app.
+Launcher — entry point for the bundled Zinnia Axion .app.
 
 Flow:
   1. Check if ~/.telemetry-tracker/config.env exists
   2. If not → show setup GUI (first launch)
   3. Load config.env into environment
   4. Install LaunchAgent for auto-start on login (idempotent)
-  5. Start the tracker agent
+  5. Start the Zinnia Axion Agent
 """
 
 from __future__ import annotations

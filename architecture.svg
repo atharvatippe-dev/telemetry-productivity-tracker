@@ -28,7 +28,7 @@
   <!-- Title -->
   <rect x="0" y="0" width="1200" height="70" fill="url(#headerGrad)" rx="12"/>
   <rect x="0" y="35" width="1200" height="35" fill="url(#headerGrad)"/>
-  <text x="600" y="42" text-anchor="middle" fill="white" font-size="22" font-weight="bold">Telemetry Productivity Tracker - System Architecture</text>
+  <text x="600" y="42" text-anchor="middle" fill="white" font-size="22" font-weight="bold">Zinnia Axion - System Architecture</text>
   <text x="600" y="62" text-anchor="middle" fill="#94a3b8" font-size="12">2-State Model: Productive vs Non-Productive | Interaction-Based Classification</text>
 
   <!-- ============================================== -->
@@ -86,9 +86,9 @@
   <text x="410" y="305" fill="#22c55e" font-size="10">OS signals</text>
 
   <!-- ============================================== -->
-  <!--  LAYER 2: Tracker Agent                        -->
+  <!--  LAYER 2: Zinnia Axion Agent                    -->
   <!-- ============================================== -->
-  <text x="40" y="310" fill="#64748b" font-size="11" font-weight="bold" letter-spacing="2">LAYER 2 - TRACKER AGENT (tracker/agent.py)</text>
+  <text x="40" y="310" fill="#64748b" font-size="11" font-weight="bold" letter-spacing="2">LAYER 2 - ZINNIA AXION AGENT (tracker/agent.py)</text>
   <rect x="30" y="320" width="1140" height="195" rx="10" fill="#ecfdf5" stroke="#86efac" stroke-width="1.5"/>
 
   <!-- Polling Loop -->
@@ -285,7 +285,7 @@
   <line x1="185" y1="1325" x2="220" y2="1325" stroke="#64748b" stroke-width="2" marker-end="url(#arrowGray)"/>
 
   <rect x="225" y="1310" width="140" height="30" rx="5" fill="#ecfdf5" stroke="#22c55e"/>
-  <text x="295" y="1330" text-anchor="middle" fill="#1e293b" font-size="10">Tracker (1s poll)</text>
+  <text x="295" y="1330" text-anchor="middle" fill="#1e293b" font-size="10">Zinnia Axion (1s poll)</text>
   <line x1="370" y1="1325" x2="405" y2="1325" stroke="#64748b" stroke-width="2" marker-end="url(#arrowGray)"/>
 
   <rect x="410" y="1310" width="140" height="30" rx="5" fill="#dbeafe" stroke="#3b82f6"/>

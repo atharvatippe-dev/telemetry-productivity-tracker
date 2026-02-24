@@ -1,5 +1,5 @@
 """
-Tracker agent — runs locally and collects telemetry every POLL_INTERVAL_SEC.
+Zinnia Axion Agent — runs locally and collects telemetry every POLL_INTERVAL_SEC.
 
 Behaviour
 ---------
@@ -232,7 +232,7 @@ def _send_batch(events: list[dict]) -> bool:
 # ── Main loop ───────────────────────────────────────────────────────
 
 def main() -> None:
-    logger.info("Starting tracker agent.")
+    logger.info("Starting Zinnia Axion Agent.")
     logger.info("  User ID       : %s", USER_ID)
     logger.info("  Backend URL   : %s", BACKEND_URL)
     logger.info("  Poll interval : %.1f s", POLL_INTERVAL)
@@ -345,7 +345,7 @@ def main() -> None:
         if batch:
             if not _send_batch(batch):
                 _save_buffer(batch)
-        logger.info("Tracker agent stopped.")
+        logger.info("Zinnia Axion Agent stopped.")
 
 
 if __name__ == "__main__":

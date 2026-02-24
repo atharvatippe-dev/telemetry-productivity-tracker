@@ -9,7 +9,7 @@ Before building, set the backend URL that will be baked into the installer:
     python installer/mac/build.py
 
 Output:
-    dist/TelemetryTracker.app
+    dist/ZinniaAxion.app
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 LAUNCHER = PROJECT_ROOT / "installer" / "mac" / "launcher.py"
 DIST_DIR = PROJECT_ROOT / "dist"
 BUILD_DIR = PROJECT_ROOT / "build"
-APP_NAME = "TelemetryTracker"
+APP_NAME = "ZinniaAxion"
 
 
 def main() -> None:

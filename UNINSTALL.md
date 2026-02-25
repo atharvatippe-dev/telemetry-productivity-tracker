@@ -3,16 +3,16 @@
 ## Windows
 
 ### Step 1 - Kill the running process
-Open **Task Manager** (Ctrl+Shift+Esc), find `ZinniaAxion`, click **End Task**.
+Open **Task Manager** (Ctrl+Shift+Esc), find `Zinnia_axion`, click **End Task**.
 
 ### Step 2 - Remove auto-start
 Open **Command Prompt** (search "cmd") and run:
 ```
-schtasks /Delete /TN ZinniaAxion /F
+schtasks /Delete /TN Zinnia_axion /F
 ```
 Also delete the Startup shortcut if it exists:
 ```
-del "%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\ZinniaAxion.bat"
+del "%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\Zinnia_axion.bat"
 ```
 
 ### Step 3 - Delete config and logs
@@ -21,7 +21,7 @@ rmdir /S /Q "%USERPROFILE%\.telemetry-tracker"
 ```
 
 ### Step 4 - Delete the installer files
-Delete both `ZinniaAxion.exe` and `ZinniaAxion-Windows.zip` from wherever you saved them (Downloads, Desktop, etc.)
+Delete both `Zinnia_axion.exe` and `Zinnia_axion-Windows.zip` from wherever you saved them (Downloads, Desktop, etc.)
 
 ---
 
@@ -43,7 +43,7 @@ rm -rf ~/.telemetry-tracker
 ```
 
 ### Step 4 - Delete the app
-Delete `ZinniaAxion.app` from wherever it was installed (Applications, Desktop, etc.)
+Delete `Zinnia_axion.app` from wherever it was installed (Applications, Desktop, etc.)
 
 ---
 

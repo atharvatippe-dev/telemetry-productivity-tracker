@@ -36,6 +36,6 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ZinniaAxion-Windows
-          path: dist/ZinniaAxion.exe
+          name: Zinnia_axion-Windows
+          path: dist/Zinnia_axion.exe
           retention-days: 90

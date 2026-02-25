@@ -173,12 +173,12 @@ zinnia-axion/
 │       └── executive_summary.py # Executive summary page (Streamlit multipage)
 ├── installer/
 │   ├── mac/
-│   │   ├── build.py            # PyInstaller build → ZinniaAxion.app
+│   │   ├── build.py            # PyInstaller build → Zinnia_axion.app
 │   │   ├── launcher.py         # macOS app entry point
 │   │   ├── setup_gui.py        # First-run Tkinter setup (User ID)
 │   │   └── launchagent.py      # LaunchAgent for auto-start
 │   └── windows/
-│       ├── build.py            # PyInstaller build → ZinniaAxion.exe
+│       ├── build.py            # PyInstaller build → Zinnia_axion.exe
 │       ├── launcher.py         # Windows exe entry point
 │       ├── setup_gui.py        # First-run Tkinter setup (User ID)
 │       └── autostart.py        # Task Scheduler / Startup folder
@@ -193,7 +193,7 @@ zinnia-axion/
 ├── requirements-macos.txt      # macOS-specific dependencies
 ├── requirements-windows.txt    # Windows-specific dependencies
 ├── requirements-linux.txt      # Linux-specific dependencies
-├── ZinniaAxion.spec            # PyInstaller spec file
+├── Zinnia_axion.spec            # PyInstaller spec file (macOS)
 ├── UNINSTALL.md                # Uninstallation guide
 └── README.md                   # This file
 ```
@@ -278,14 +278,14 @@ python -m tracker.agent
 ```bash
 export INSTALLER_BACKEND_URL=https://your-ngrok-url.ngrok-free.dev
 python installer/mac/build.py
-# Output: dist/ZinniaAxion.app — distribute to employees
+# Output: dist/Zinnia_axion.app — distribute to employees
 ```
 
 **Windows:**
 ```bash
 set INSTALLER_BACKEND_URL=https://your-ngrok-url.ngrok-free.dev
 python installer/windows/build.py
-# Output: dist/ZinniaAxion.exe — distribute to employees
+# Output: dist/Zinnia_axion.exe — distribute to employees
 ```
 
 The installer:
@@ -299,7 +299,7 @@ The installer:
 Use the `build-windows.yml` workflow:
 1. Go to Actions → "Build Windows Installer"
 2. Enter the backend URL
-3. Download the artifact `ZinniaAxion-Windows`
+3. Download the artifact `Zinnia_axion-Windows`
 
 ### Option C: Manual Setup
 
@@ -618,15 +618,15 @@ See [UNINSTALL.md](UNINSTALL.md) for platform-specific uninstallation instructio
 launchctl unload ~/Library/LaunchAgents/com.telemetry.tracker.plist
 rm ~/Library/LaunchAgents/com.telemetry.tracker.plist
 # Remove app and config
-rm -rf /Applications/ZinniaAxion.app ~/.zinnia-axion
+rm -rf /Applications/Zinnia_axion.app ~/.zinnia-axion
 ```
 
 **Windows:**
 ```powershell
 # Remove scheduled task
-schtasks /Delete /TN "ZinniaAxion" /F
+schtasks /Delete /TN "Zinnia_axion" /F
 # Remove app and config
-Remove-Item -Recurse "$env:LOCALAPPDATA\ZinniaAxion"
+Remove-Item -Recurse "$env:LOCALAPPDATA\Zinnia_axion"
 Remove-Item -Recurse "$env:USERPROFILE\.zinnia-axion"
 ```
 

@@ -1,0 +1,290 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 900" width="1400" height="900" font-family="Inter, Arial, Helvetica Neue, sans-serif">
+<defs>
+  <style>
+    .h1{font-size:21px;font-weight:700;fill:#F8FAFC;letter-spacing:.3px}
+    .h2{font-size:10.5px;font-weight:500;fill:#64748B;letter-spacing:3px}
+    .zt{font-size:11.5px;font-weight:700;fill:#0F172A}
+    .zn{font-size:9px;font-weight:700;fill:#FFF}
+    .sl{font-size:8.5px;font-weight:700;letter-spacing:1px}
+    .sb{font-size:9.5px;font-weight:600;fill:#1E293B}
+    .bt{font-size:9px;fill:#334155}
+    .bi{font-size:8.5px;fill:#64748B;font-style:italic}
+    .tl{font-size:8px;fill:#94A3B8;font-style:italic;font-weight:500}
+  </style>
+  <marker id="arr" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+    <path d="M1,1 L8,4 L1,7" fill="none" stroke="#94A3B8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </marker>
+  <filter id="ds"><feDropShadow dx="0" dy="2" stdDeviation="4" flood-opacity=".06"/></filter>
+  <linearGradient id="tg" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%" stop-color="#0F172A"/><stop offset="100%" stop-color="#1E293B"/>
+  </linearGradient>
+  <clipPath id="zc1"><rect x="30"   y="90" width="248" height="640" rx="12"/></clipPath>
+  <clipPath id="zc2"><rect x="303"  y="90" width="248" height="640" rx="12"/></clipPath>
+  <clipPath id="zc3"><rect x="576"  y="90" width="248" height="640" rx="12"/></clipPath>
+  <clipPath id="zc4"><rect x="849"  y="90" width="248" height="640" rx="12"/></clipPath>
+  <clipPath id="zc5"><rect x="1122" y="90" width="248" height="640" rx="12"/></clipPath>
+</defs>
+
+<!-- BACKGROUND -->
+<rect width="1400" height="900" fill="#F1F5F9"/>
+
+<!-- TOP BANNER -->
+<rect width="1400" height="70" fill="url(#tg)"/>
+<text x="700" y="33" text-anchor="middle" class="h1">Zinnia Axion &#8212; Executive Overview</text>
+<text x="700" y="53" text-anchor="middle" class="h2">INVISIBLE SIGNALS. VISIBLE PERFORMANCE.</text>
+
+<!-- FLOW LINE -->
+<line x1="154" y1="380" x2="1246" y2="380" stroke="#CBD5E1" stroke-width="1" stroke-dasharray="5,4" opacity=".35"/>
+
+<!-- ============================================================ -->
+<!-- ZONE 1 : EMPLOYEE DEVICES                                    -->
+<!-- ============================================================ -->
+<rect x="30" y="90" width="248" height="640" rx="12" fill="#FFF" filter="url(#ds)" stroke="#E2E8F0" stroke-width=".5"/>
+<rect x="30" y="90" width="248" height="5" fill="#3B82F6" clip-path="url(#zc1)"/>
+<circle cx="55" cy="112" r="11" fill="#3B82F6"/>
+<text x="55" y="116" text-anchor="middle" class="zn">01</text>
+<text x="72" y="116" class="zt">Employee Devices</text>
+<line x1="42" y1="130" x2="266" y2="130" stroke="#E2E8F0" stroke-width=".5"/>
+
+<!-- Mac icon -->
+<g transform="translate(95,168)">
+  <rect x="-20" y="-20" width="40" height="28" rx="3" fill="none" stroke="#64748B" stroke-width="1.3"/>
+  <rect x="-4" y="8" width="8" height="5" fill="none" stroke="#64748B" stroke-width="1"/>
+  <rect x="-10" y="13" width="20" height="2" rx="1" fill="#94A3B8"/>
+  <text x="0" y="26" text-anchor="middle" fill="#64748B" font-size="7" font-weight="600">macOS</text>
+</g>
+<!-- Windows icon -->
+<g transform="translate(213,168)">
+  <rect x="-20" y="-16" width="40" height="26" rx="3" fill="none" stroke="#64748B" stroke-width="1.3"/>
+  <rect x="-24" y="10" width="48" height="3" rx="1.5" fill="none" stroke="#64748B" stroke-width="1"/>
+  <line x1="0" y1="-8" x2="0" y2="2" stroke="#64748B" stroke-width=".7"/>
+  <line x1="-10" y1="-3" x2="10" y2="-3" stroke="#64748B" stroke-width=".7"/>
+  <text x="0" y="26" text-anchor="middle" fill="#64748B" font-size="7" font-weight="600">Windows</text>
+</g>
+
+<text x="154" y="212" text-anchor="middle" class="sb">Axion Tracker Agent</text>
+<text x="154" y="225" text-anchor="middle" class="bi">(Silent background service)</text>
+
+<text x="46" y="255" class="sl" fill="#16A34A">&#10003;  CAPTURES</text>
+<text x="46" y="274" class="bt">&#8226;  Active application name</text>
+<text x="46" y="289" class="bt">&#8226;  Window category</text>
+<text x="46" y="304" class="bt">&#8226;  Idle duration (seconds)</text>
+<text x="46" y="319" class="bt">&#8226;  Mouse / keystroke counts</text>
+<text x="54" y="334" class="bi">(counts only &#8212; never content)</text>
+
+<text x="46" y="364" class="sl" fill="#DC2626">&#10007;  NEVER CAPTURES</text>
+<text x="46" y="383" class="bt">&#8226;  Keystroke content</text>
+<text x="46" y="398" class="bt">&#8226;  Screenshots</text>
+<text x="46" y="413" class="bt">&#8226;  Messages or emails</text>
+<text x="46" y="428" class="bt">&#8226;  Passwords or credentials</text>
+
+<line x1="46" y1="690" x2="262" y2="690" stroke="#E2E8F0" stroke-width=".5"/>
+<text x="154" y="710" text-anchor="middle" class="tl">Zero content capture by design</text>
+
+<!-- ARROW 1 -->
+<line x1="280" y1="380" x2="300" y2="380" stroke="#94A3B8" stroke-width="1.5" marker-end="url(#arr)"/>
+
+<!-- ============================================================ -->
+<!-- ZONE 2 : PRIVACY GUARDRAILS                                  -->
+<!-- ============================================================ -->
+<rect x="303" y="90" width="248" height="640" rx="12" fill="#FFF" filter="url(#ds)" stroke="#E2E8F0" stroke-width=".5"/>
+<rect x="303" y="90" width="248" height="5" fill="#10B981" clip-path="url(#zc2)"/>
+<circle cx="328" cy="112" r="11" fill="#10B981"/>
+<text x="328" y="116" text-anchor="middle" class="zn">02</text>
+<text x="345" y="116" class="zt">Privacy Guardrails</text>
+<line x1="315" y1="130" x2="539" y2="130" stroke="#E2E8F0" stroke-width=".5"/>
+
+<!-- Shield -->
+<g transform="translate(427,178)">
+  <path d="M0,-28 L22,-18 L22,4 C22,16 0,28 0,28 C0,28 -22,16 -22,4 L-22,-18 Z" fill="#ECFDF5" stroke="#10B981" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M-6,-4 L-1,2 L8,-8" fill="none" stroke="#10B981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+<text x="427" y="224" text-anchor="middle" class="sb">Data Protection Layer</text>
+
+<rect x="319" y="246" width="216" height="40" rx="7" fill="#F0FDF4" stroke="#BBF7D0" stroke-width=".7"/>
+<text x="329" y="263" fill="#15803D" font-size="9.5" font-weight="600">Counts only</text>
+<text x="329" y="277" fill="#15803D" font-size="8">No content is ever transmitted</text>
+
+<rect x="319" y="296" width="216" height="40" rx="7" fill="#F0FDF4" stroke="#BBF7D0" stroke-width=".7"/>
+<text x="329" y="313" fill="#15803D" font-size="9.5" font-weight="600">Window title redaction</text>
+<text x="329" y="327" fill="#15803D" font-size="8">Optional &#8212; configurable per deployment</text>
+
+<rect x="319" y="346" width="216" height="40" rx="7" fill="#F0FDF4" stroke="#BBF7D0" stroke-width=".7"/>
+<text x="329" y="363" fill="#15803D" font-size="9.5" font-weight="600">Local buffering</text>
+<text x="329" y="377" fill="#15803D" font-size="8">Data queued locally when offline</text>
+
+<rect x="319" y="396" width="216" height="40" rx="7" fill="#F0FDF4" stroke="#BBF7D0" stroke-width=".7"/>
+<text x="329" y="413" fill="#15803D" font-size="9.5" font-weight="600">No admin on device</text>
+<text x="329" y="427" fill="#15803D" font-size="8">Agent runs silently, no user access</text>
+
+<line x1="319" y1="690" x2="535" y2="690" stroke="#E2E8F0" stroke-width=".5"/>
+<text x="427" y="710" text-anchor="middle" class="tl">Privacy-first architecture</text>
+
+<!-- ARROW 2 -->
+<line x1="553" y1="380" x2="573" y2="380" stroke="#94A3B8" stroke-width="1.5" marker-end="url(#arr)"/>
+
+<!-- ============================================================ -->
+<!-- ZONE 3 : AXION BACKEND                                       -->
+<!-- ============================================================ -->
+<rect x="576" y="90" width="248" height="640" rx="12" fill="#FFF" filter="url(#ds)" stroke="#E2E8F0" stroke-width=".5"/>
+<rect x="576" y="90" width="248" height="5" fill="#6366F1" clip-path="url(#zc3)"/>
+<circle cx="601" cy="112" r="11" fill="#6366F1"/>
+<text x="601" y="116" text-anchor="middle" class="zn">03</text>
+<text x="618" y="116" class="zt">Axion Backend</text>
+<line x1="588" y1="130" x2="812" y2="130" stroke="#E2E8F0" stroke-width=".5"/>
+
+<!-- Server rack -->
+<g transform="translate(700,172)">
+  <rect x="-26" y="-20" width="52" height="14" rx="2" fill="none" stroke="#6366F1" stroke-width="1.3"/>
+  <circle cx="17" cy="-13" r="2" fill="#6366F1" opacity=".4"/><circle cx="22" cy="-13" r="2" fill="#6366F1"/>
+  <rect x="-26" y="-2" width="52" height="14" rx="2" fill="none" stroke="#6366F1" stroke-width="1.3"/>
+  <circle cx="17" cy="5" r="2" fill="#6366F1" opacity=".4"/><circle cx="22" cy="5" r="2" fill="#6366F1"/>
+  <rect x="-26" y="16" width="52" height="14" rx="2" fill="none" stroke="#6366F1" stroke-width="1.3"/>
+  <circle cx="17" cy="23" r="2" fill="#6366F1" opacity=".4"/><circle cx="22" cy="23" r="2" fill="#6366F1"/>
+</g>
+<text x="700" y="218" text-anchor="middle" class="sb">Company-Controlled</text>
+<text x="700" y="231" text-anchor="middle" class="sb">API + Secure Storage</text>
+
+<text x="592" y="260" class="sl" fill="#475569">PROCESSING PIPELINE</text>
+<text x="592" y="280" class="bt">&#8226;  Telemetry received in</text>
+<text x="600" y="294" class="bt">   10-second batched buckets</text>
+<text x="592" y="314" class="bt">&#8226;  Classification engine assigns</text>
+<text x="600" y="328" class="bt">   Meeting / Productive / Non-Prod.</text>
+<text x="592" y="348" class="bt">&#8226;  Integrity checks detect</text>
+<text x="600" y="362" class="bt">   anti-macro / automation signals</text>
+<text x="592" y="382" class="bt">&#8226;  Auto-cleanup of aged data</text>
+<text x="600" y="396" class="bi">(configurable retention period)</text>
+
+<line x1="592" y1="690" x2="808" y2="690" stroke="#E2E8F0" stroke-width=".5"/>
+<text x="700" y="710" text-anchor="middle" class="tl">Your data, your infrastructure</text>
+
+<!-- ARROW 3 -->
+<line x1="826" y1="380" x2="846" y2="380" stroke="#94A3B8" stroke-width="1.5" marker-end="url(#arr)"/>
+
+<!-- ============================================================ -->
+<!-- ZONE 4 : PRODUCTIVITY ENGINE                                 -->
+<!-- ============================================================ -->
+<rect x="849" y="90" width="248" height="640" rx="12" fill="#FFF" filter="url(#ds)" stroke="#E2E8F0" stroke-width=".5"/>
+<rect x="849" y="90" width="248" height="5" fill="#F59E0B" clip-path="url(#zc4)"/>
+<circle cx="874" cy="112" r="11" fill="#F59E0B"/>
+<text x="874" y="116" text-anchor="middle" class="zn">04</text>
+<text x="891" y="116" class="zt">Productivity Engine</text>
+<line x1="861" y1="130" x2="1085" y2="130" stroke="#E2E8F0" stroke-width=".5"/>
+
+<!-- Gear -->
+<g transform="translate(973,170)">
+  <circle cx="0" cy="0" r="14" fill="none" stroke="#F59E0B" stroke-width="1.5"/>
+  <circle cx="0" cy="0" r="5" fill="#FEF3C7" stroke="#F59E0B" stroke-width="1.2"/>
+  <rect x="-2.5" y="-18" width="5" height="7" rx="1" fill="#F59E0B" opacity=".5"/>
+  <rect x="-2.5" y="11" width="5" height="7" rx="1" fill="#F59E0B" opacity=".5"/>
+  <rect x="-18" y="-2.5" width="7" height="5" rx="1" fill="#F59E0B" opacity=".5"/>
+  <rect x="11" y="-2.5" width="7" height="5" rx="1" fill="#F59E0B" opacity=".5"/>
+</g>
+<text x="973" y="204" text-anchor="middle" class="sb">Axion Classification Engine</text>
+
+<text x="865" y="232" class="sl" fill="#475569">DECISION LOGIC</text>
+
+<rect x="865" y="244" width="216" height="26" rx="5" fill="#EFF6FF" stroke="#BFDBFE" stroke-width=".7"/>
+<text x="875" y="261" fill="#1D4ED8" font-size="9">Meeting apps  &#8594;  <tspan font-weight="700">Productive</tspan></text>
+
+<rect x="865" y="278" width="216" height="26" rx="5" fill="#FEF2F2" stroke="#FECACA" stroke-width=".7"/>
+<text x="875" y="295" fill="#B91C1C" font-size="9">Non-prod. apps  &#8594;  <tspan font-weight="700">Non-Productive</tspan></text>
+
+<rect x="865" y="312" width="216" height="36" rx="5" fill="#FFFBEB" stroke="#FDE68A" stroke-width=".7"/>
+<text x="875" y="328" fill="#92400E" font-size="9">Else &#8594; interaction + idle thresholds</text>
+<text x="875" y="341" fill="#92400E" font-size="8">(activity scoring per interval)</text>
+
+<rect x="865" y="364" width="216" height="44" rx="7" fill="#EEF2FF" stroke="#C7D2FE" stroke-width=".7"/>
+<text x="875" y="382" fill="#4338CA" font-size="8.5" font-weight="600">Multi-monitor detection</text>
+<text x="875" y="396" fill="#4338CA" font-size="8">Distraction on secondary screens (macOS)</text>
+
+<line x1="865" y1="690" x2="1081" y2="690" stroke="#E2E8F0" stroke-width=".5"/>
+<text x="973" y="710" text-anchor="middle" class="tl">Automated, transparent classification</text>
+
+<!-- ARROW 4 -->
+<line x1="1099" y1="380" x2="1119" y2="380" stroke="#94A3B8" stroke-width="1.5" marker-end="url(#arr)"/>
+
+<!-- ============================================================ -->
+<!-- ZONE 5 : WHAT LEADERS SEE                                    -->
+<!-- ============================================================ -->
+<rect x="1122" y="90" width="248" height="640" rx="12" fill="#FFF" filter="url(#ds)" stroke="#E2E8F0" stroke-width=".5"/>
+<rect x="1122" y="90" width="248" height="5" fill="#8B5CF6" clip-path="url(#zc5)"/>
+<circle cx="1147" cy="112" r="11" fill="#8B5CF6"/>
+<text x="1147" y="116" text-anchor="middle" class="zn">05</text>
+<text x="1164" y="116" class="zt">What Leaders See</text>
+<line x1="1134" y1="130" x2="1358" y2="130" stroke="#E2E8F0" stroke-width=".5"/>
+
+<!-- Card 1: Executive Summary -->
+<rect x="1138" y="146" width="216" height="195" rx="8" fill="#FAFAFA" stroke="#E2E8F0" stroke-width=".8"/>
+<rect x="1138" y="146" width="216" height="28" rx="8" fill="#F1F5F9"/>
+<rect x="1138" y="166" width="216" height="8" fill="#F1F5F9"/>
+<text x="1150" y="165" fill="#0F172A" font-size="10" font-weight="700">Daily Executive Summary</text>
+
+<text x="1150" y="194" class="sl" fill="#475569">KEY METRICS</text>
+<text x="1150" y="211" class="bt">&#8226;  TPI Score (Team Productivity)</text>
+<text x="1150" y="226" class="bt">&#8226;  Distraction Load %</text>
+<text x="1150" y="241" class="bt">&#8226;  Engagement Spread</text>
+<text x="1150" y="256" class="bt">&#8226;  Team Coverage hours</text>
+
+<text x="1150" y="278" class="sl" fill="#475569">RISK TAG</text>
+<rect x="1150" y="286" width="44" height="18" rx="9" fill="#DCFCE7"/>
+<text x="1172" y="299" text-anchor="middle" fill="#16A34A" font-size="8" font-weight="700">Green</text>
+<rect x="1200" y="286" width="50" height="18" rx="9" fill="#FEF3C7"/>
+<text x="1225" y="299" text-anchor="middle" fill="#D97706" font-size="8" font-weight="700">Amber</text>
+<rect x="1256" y="286" width="38" height="18" rx="9" fill="#FEE2E2"/>
+<text x="1275" y="299" text-anchor="middle" fill="#DC2626" font-size="8" font-weight="700">Red</text>
+
+<!-- Card 2: Trends and Insights -->
+<rect x="1138" y="355" width="216" height="180" rx="8" fill="#FAFAFA" stroke="#E2E8F0" stroke-width=".8"/>
+<rect x="1138" y="355" width="216" height="28" rx="8" fill="#F1F5F9"/>
+<rect x="1138" y="375" width="216" height="8" fill="#F1F5F9"/>
+<text x="1150" y="374" fill="#0F172A" font-size="10" font-weight="700">Trends and Insights</text>
+
+<!-- Mini chart -->
+<polyline points="1152,405 1172,399 1192,402 1212,392 1232,395 1252,387 1272,382 1292,385 1312,378 1340,372" fill="none" stroke="#8B5CF6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="1152,415 1172,419 1192,413 1212,421 1232,417 1252,424 1272,427 1292,422 1312,428 1340,432" fill="none" stroke="#EF4444" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="3,2"/>
+<!-- Chart legend -->
+<line x1="1152" y1="448" x2="1170" y2="448" stroke="#8B5CF6" stroke-width="1.5"/>
+<text x="1174" y="451" fill="#64748B" font-size="7">Productive</text>
+<line x1="1228" y1="448" x2="1246" y2="448" stroke="#EF4444" stroke-width="1.2" stroke-dasharray="3,2"/>
+<text x="1250" y="451" fill="#64748B" font-size="7">Non-Prod.</text>
+
+<text x="1150" y="472" class="bt">&#8226;  Weekly productivity trends</text>
+<text x="1150" y="487" class="bt">&#8226;  Top productive vs non-prod. apps</text>
+<text x="1150" y="502" class="bt">&#8226;  Team variance and outliers</text>
+
+<line x1="1138" y1="690" x2="1354" y2="690" stroke="#E2E8F0" stroke-width=".5"/>
+<text x="1246" y="710" text-anchor="middle" class="tl">Actionable intelligence, daily</text>
+
+<!-- ============================================================ -->
+<!-- LEGEND BAR                                                   -->
+<!-- ============================================================ -->
+<rect x="30" y="752" width="1340" height="44" rx="8" fill="#FFF" stroke="#E2E8F0" stroke-width=".5"/>
+<text x="52" y="772" fill="#475569" font-size="8.5" font-weight="700" letter-spacing="1">LEGEND</text>
+<rect x="120" y="764" width="11" height="11" rx="2" fill="#22C55E"/>
+<text x="136" y="774" fill="#334155" font-size="9">Productive</text>
+<rect x="210" y="764" width="11" height="11" rx="2" fill="#EF4444"/>
+<text x="226" y="774" fill="#334155" font-size="9">Non-Productive</text>
+<rect x="326" y="764" width="11" height="11" rx="2" fill="#3B82F6"/>
+<text x="342" y="774" fill="#334155" font-size="9">Meetings</text>
+
+<line x1="420" y1="762" x2="420" y2="782" stroke="#E2E8F0" stroke-width=".5"/>
+<text x="440" y="772" fill="#64748B" font-size="8" font-weight="600" letter-spacing=".5">PLATFORMS</text>
+<text x="516" y="772" fill="#334155" font-size="8.5">macOS / Windows</text>
+
+<line x1="620" y1="762" x2="620" y2="782" stroke="#E2E8F0" stroke-width=".5"/>
+<text x="640" y="772" fill="#64748B" font-size="8" font-weight="600" letter-spacing=".5">RETENTION</text>
+<text x="716" y="772" fill="#334155" font-size="8.5">Configurable</text>
+
+<line x1="800" y1="762" x2="800" y2="782" stroke="#E2E8F0" stroke-width=".5"/>
+<text x="820" y="772" fill="#64748B" font-size="8" font-weight="600" letter-spacing=".5">DEPLOYMENT</text>
+<text x="916" y="772" fill="#334155" font-size="8.5">On-premise or hosted</text>
+
+<!-- ============================================================ -->
+<!-- FOOTER                                                       -->
+<!-- ============================================================ -->
+<text x="700" y="840" text-anchor="middle" fill="#94A3B8" font-size="9.5">Data is inferred from app categories and interaction counts only &#8212; no keystroke content captured.</text>
+<text x="1350" y="870" text-anchor="end" fill="#CBD5E1" font-size="7.5" font-weight="500">Zinnia Axion v1.0</text>
+<text x="50" y="870" fill="#CBD5E1" font-size="7.5" font-weight="500">Zinnia &#169; 2026</text>
+
+</svg>

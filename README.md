@@ -1,6 +1,6 @@
 # Zinnia Axion
 
-A privacy-conscious, telemetry-driven Zinnia Axion that silently records how employees spend their computer time and surfaces the data through real-time dashboards. Deploys as a standalone executable on **macOS** and **Windows** — no Python installation needed on end-user machines.
+A privacy-conscious, telemetry-driven productivity tracker that silently records how employees spend their computer time and surfaces the data through real-time dashboards. Deploys as a standalone executable on **macOS** and **Windows** — no Python installation needed on end-user machines.
 
 **Key privacy guarantee:** Only interaction *counts* are recorded — keystroke content is **never** captured.
 
@@ -18,109 +18,130 @@ A privacy-conscious, telemetry-driven Zinnia Axion that silently records how emp
 8. [API Reference](#api-reference)
 9. [Configuration](#configuration)
 10. [Security & Anti-Cheat](#security--anti-cheat)
-11. [Uninstallation](#uninstallation)
-12. [Known Limitations & Roadmap](#known-limitations--roadmap)
+11. [Privacy](#privacy)
+12. [Uninstallation](#uninstallation)
 
 ---
 
 ## Architecture
 
 ```
-                          ┌──────────────────────────────────────────┐
-                          │             Admin's Machine              │
-                          │                                          │
-┌──────────────┐  POST    │  ┌────────────┐       ┌──────────────┐  │
-│ Employee PC  │  /track  │  │  Flask API  │──────▶│  PostgreSQL  │  │
-│ (Zinnia Axion│─────────▶│  │  (Backend)  │       │   / SQLite   │  │
-│  Agent .exe) │  (JSON)  │  └─────┬──────┘       └──────────────┘  │
-└──────────────┘          │        │ REST                            │
-                          │        ▼                                 │
- ┌──────────────┐         │  ┌──────────────┐  ┌─────────────────┐  │
-│ Employee PC  │         │  │  Streamlit   │  │   Streamlit     │  │
-│ (Zinnia Axion│────────▶│  │  User Dash   │  │   Admin Dash    │  │
-│  Agent .exe) │         │  │  :8501       │  │   :8502         │  │
- └──────────────┘         │  └──────────────┘  └─────────────────┘  │
-                          │        ▲                                 │
-         ...              │        │                                 │
-                          │  ┌──────────────┐                       │
- Employees access their   │  │  HTML User   │                       │
- dashboard via browser:   │  │  Dashboard   │                       │
- /dashboard/<user_id>     │  │  (Chart.js)  │                       │
-                          │  └──────────────┘                       │
-                          │                                          │
-                          │  ┌──────────────┐                       │
-                          │  │    ngrok     │ (exposes backend to   │
-                          │  │   tunnel     │  remote employees)    │
-                          │  └──────────────┘                       │
-                          └──────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                     Employee Laptop (macOS / Windows)            │
+│                                                                  │
+│  ┌────────────────────────────────────┐                          │
+│  │  Tracker Agent (tracker/agent.py)  │                          │
+│  │                                    │                          │
+│  │  • Polls every 1s: active window,  │                          │
+│  │    keystroke count, mouse clicks,  │                          │
+│  │    mouse distance, idle time       │                          │
+│  │  • Multi-monitor distraction scan  │                          │
+│  │  • Batches every 10s → POST /track │                          │
+│  │  • Offline buffer (JSON) on fail   │                          │
+│  └──────────────┬─────────────────────┘                          │
+│                 │  HTTPS (ngrok or direct)                        │
+└─────────────────┼────────────────────────────────────────────────┘
+                  │
+                  ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                     Central Server (Admin Machine)               │
+│                                                                  │
+│  ┌──────────────────────────────────────────────────────────┐    │
+│  │  Flask Backend (backend/app.py) — port 5000              │    │
+│  │                                                          │    │
+│  │  • REST API: /track, /summary, /apps, /daily, /admin/*  │    │
+│  │  • Productivity engine (bucketize → classify)            │    │
+│  │  • PostgreSQL / SQLite storage                           │    │
+│  │  • Auto-cleanup (DATA_RETENTION_DAYS)                    │    │
+│  │  • Self-contained HTML dashboard per user                │    │
+│  │  • Tracker online/offline status                         │    │
+│  └──────────────────────────────────────────────────────────┘    │
+│                                                                  │
+│  ┌──────────────────────┐  ┌──────────────────────────────────┐  │
+│  │ User Dashboard       │  │ Admin Dashboard                  │  │
+│  │ (Streamlit :8501)    │  │ (Streamlit :8502)                │  │
+│  │                      │  │                                  │  │
+│  │ • Today's metrics    │  │ • Team leaderboard               │  │
+│  │ • State distribution │  │ • Tracker online/offline status  │  │
+│  │ • Daily trend        │  │ • Per-user drill-down            │  │
+│  │ • App breakdown      │  │ • AI-powered summary (OpenAI)    │  │
+│  │ • Auto-refresh       │  │ • Delete user data               │  │
+│  └──────────────────────┘  │ • Executive summary page         │  │
+│                            └──────────────────────────────────┘  │
+│                                                                  │
+│  ┌──────────────────────────────────────────────────────────┐    │
+│  │  ngrok tunnel (optional) — exposes :5000 to the internet │    │
+│  └──────────────────────────────────────────────────────────┘    │
+└──────────────────────────────────────────────────────────────────┘
 ```
-
-### Components
-
-| Component | Path | Description |
-|-----------|------|-------------|
-| **Backend** | `backend/` | Flask REST API + SQLAlchemy models + productivity inference engine |
-| **Zinnia Axion Agent** | `tracker/` | Local agent collecting active window, keyboard/mouse counts, idle time |
-| **User Dashboard** | `frontend/dashboard.py` | Streamlit dashboard for personal productivity stats |
-| **Admin Dashboard** | `frontend/admin_dashboard.py` | Streamlit admin panel with leaderboard and per-user drill-down |
-| **HTML Dashboard** | `backend/templates/dashboard.html` | Self-contained Chart.js dashboard served by Flask (no install needed) |
-| **macOS Installer** | `installer/mac/` | PyInstaller build + LaunchAgent auto-start |
-| **Windows Installer** | `installer/windows/` | PyInstaller build + Task Scheduler auto-start |
-| **CI/CD** | `.github/workflows/` | GitHub Actions workflow for automated Windows `.exe` builds |
 
 ---
 
 ## Productivity Model
 
-Zinnia Axion uses a **2-state productivity model** (`productive` / `non_productive`) powered by a decision tree in `backend/productivity.py`.
+Time is classified into **two states**: `productive` and `non_productive`.
 
-### Decision Tree (per 60-second bucket)
+Each batch of raw events is grouped into **10-second buckets**. Each bucket is classified using this decision tree (first match wins):
 
-```
-1. Is the app a MEETING app (Zoom, Teams, Meet)?
-   └─ YES → productive (meetings are always work)
+| Priority | Condition | Result |
+|----------|-----------|--------|
+| 1 | App is in `NON_PRODUCTIVE_APPS` (YouTube, Netflix, Reddit, etc.) | `non_productive` |
+| 2 | App is in `MEETING_APPS` (Zoom, Teams, Meet, etc.) | `productive` |
+| 3 | Interaction meets threshold AND passes anti-cheat check | `productive` |
+| 4 | Active presence detected (mouse movement, not idle, not distracted) | `productive` |
+| 5 | None of the above | `non_productive` |
 
-2. Is the app a NON-PRODUCTIVE app (YouTube, Netflix, Reddit, etc.)?
-   └─ YES → non_productive
+**Idle / away time is not counted at all** — only active computer usage contributes to either category.
 
-3. Does the bucket have enough interaction (keystrokes + clicks ≥ threshold)?
-   ├─ YES → productive (actively working)
-   └─ NO  → Check active presence...
+### Interaction Thresholds (10-second buckets)
 
-4. Active Presence: mouse movement ≥ threshold AND idle < threshold AND no distraction?
-   ├─ YES → productive (reading/reviewing code)
-   └─ NO  → non_productive
-```
+| Metric | Threshold | Meaning |
+|--------|-----------|---------|
+| Combined (keystrokes + clicks) | ≥ 2 | Any mix of typing and clicking |
+| Keystrokes alone | ≥ 1 | Typing activity |
+| Mouse clicks alone | ≥ 1 | Clicking activity |
 
-### Anti-Cheat Detection
+### Active Presence (Reading Detection)
 
-Each bucket also runs through anti-cheat checks:
-- **Zero-sample ratio:** Real typing has natural pauses (≥25% of samples are zero); auto-clickers don't.
-- **Distinct values:** Real typing produces many different per-sample counts; auto-clickers produce 1-2 repeating values.
-- **Anti-wiggle:** Requires ≥15 distinct 1-second samples with mouse movement to count as "reading" (defeats occasional mouse nudges).
+For users reading without typing (code review, documents, etc.):
 
-### Multi-Monitor / Distraction Detection
-
-On macOS, Zinnia Axion enumerates ALL visible windows across monitors using `CGWindowListCopyWindowInfo`. If a non-productive app (YouTube, Netflix, etc.) is visible on any monitor while the user is working, the `distraction_visible` flag is set. The productivity engine blocks the "active presence" pathway when the distraction ratio exceeds 30%.
+- Mouse movement ≥ 8 pixels total in the bucket
+- OS idle time < 30 seconds
+- Movement in ≥ 3 of 10 samples (anti-wiggle)
+- No visible distraction on other monitors
 
 ---
 
 ## Features
 
-- **Cross-platform:** macOS, Windows, Linux (Zinnia Axion agent)
-- **Standalone executables:** PyInstaller-bundled `.app` (macOS) and `.exe` (Windows) — no Python on employee machines
-- **First-run setup wizard:** Tkinter GUI for user ID and backend URL configuration
-- **Auto-start on boot:** macOS LaunchAgent / Windows Task Scheduler (with Startup folder fallback)
-- **Offline resilience:** Zinnia Axion Agent buffers events locally (JSON file) when the backend is unreachable
-- **Sleep/wake handling:** Detects laptop sleep, flushes pre-sleep data, skips inflated post-wake samples
-- **Ghost app filtering:** Suppresses duplicate events when no actual app change occurred
-- **Window title redaction:** 3 modes — `full`, `redacted` (keeps only classification keywords), `off`
-- **Auto data retention:** Purges events older than N days on backend startup
-- **Browser website extraction:** Parses browser window titles to extract website/service names
-- **Real-time dashboards:** Auto-refreshing Streamlit and HTML dashboards with Chart.js
-- **Admin leaderboard:** Ranks all employees by productive/non-productive time
-- **User deletion:** Admin can delete all data for any user via the dashboard
-- **Ngrok integration:** Expose the backend to remote employees through a secure tunnel
+### Tracker Agent
+- **1-second polling** with 10-second batch uploads
+- **Offline buffering** — events saved to local JSON when backend is unreachable; auto-flushed on reconnect
+- **Sleep/wake detection** — detects lid close, hibernation; resets counters on wake
+- **Multi-monitor distraction detection** — scans all visible windows (not just active) for non-productive apps in split-view, PiP, or secondary monitors
+- **Ghost app filtering** — ignores system processes (loginwindow, ScreenSaver, Dock, etc.) when no interaction
+- **Window title privacy modes** — `full`, `redacted` (keywords only), or `off`
+- **Cross-platform** — macOS (pyobjc), Windows (pywin32), Linux (xdotool)
+
+### Backend
+- **Flask REST API** with CORS support
+- **PostgreSQL or SQLite** storage via SQLAlchemy
+- **Timezone-aware day boundaries** (configurable via `TIMEZONE`)
+- **Auto-cleanup** of events older than `DATA_RETENTION_DAYS` on startup
+- **Self-contained HTML dashboard** served at `/dashboard/<user_id>` — shareable via ngrok
+- **Tracker online/offline status** — real-time detection based on last event timestamp
+
+### Dashboards
+- **User Dashboard** (Streamlit, port 8501) — personal productivity view with metrics, trends, and app breakdown
+- **Admin Dashboard** (Streamlit, port 8502) — team leaderboard with color-coded rows, tracker status indicators, per-user drill-down, and delete functionality
+- **Summary Page** — AI-generated (OpenAI) or heuristic executive-ready team productivity report with regenerate capability
+- **HTML Dashboard** — lightweight, self-contained page served by the backend at `/dashboard/<user_id>` for remote access via ngrok
+
+### AI Summary
+- **OpenAI integration** — generates executive-friendly summaries from aggregated, privacy-safe data
+- **Heuristic fallback** — deterministic summary when OpenAI is unavailable
+- **Caching** — 5-minute TTL to control API costs
+- **Privacy-safe** — only aggregated metrics are sent; no window titles or keystroke content
 
 ---
 
@@ -128,198 +149,259 @@ On macOS, Zinnia Axion enumerates ALL visible windows across monitors using `CGW
 
 ```
 zinnia-axion/
-├── .env.example                        # Template configuration (all settings documented)
-├── .github/
-│   └── workflows/
-│       └── build-windows.yml           # GitHub Actions: automated Windows .exe build
-├── README.md                           # This file
-├── TODO.md                             # Known loopholes & future improvements
-├── UNINSTALL.md                        # Uninstall instructions (Windows & macOS)
-├── ZinniaAxion.spec                    # PyInstaller spec for macOS .app
-├── architecture.svg                    # Architecture diagram
-├── requirements.txt                    # Core Python dependencies
-├── requirements-macos.txt              # macOS-specific (pyobjc)
-├── requirements-windows.txt            # Windows-specific (pywin32, psutil)
-├── requirements-linux.txt              # Linux-specific (psutil)
-│
 ├── backend/
 │   ├── __init__.py
-│   ├── app.py                          # Flask application + all REST routes
-│   ├── config.py                       # Configuration loader (from .env)
-│   ├── models.py                       # SQLAlchemy ORM model (TelemetryEvent)
-│   ├── productivity.py                 # Productivity inference engine (bucketize, summarize)
+│   ├── app.py                  # Flask REST API (all endpoints)
+│   ├── config.py               # Configuration loader (.env)
+│   ├── models.py               # SQLAlchemy models (TelemetryEvent)
+│   ├── productivity.py         # Productivity engine (bucketize, classify)
 │   └── templates/
-│       └── dashboard.html              # Self-contained HTML dashboard (Chart.js)
-│
+│       └── dashboard.html      # Self-contained HTML dashboard
 ├── tracker/
 │   ├── __init__.py
-│   ├── agent.py                        # Main tracker loop + batching + buffer
-│   └── platform/
-│       ├── __init__.py
-│       ├── base.py                     # Abstract PlatformCollector interface
-│       ├── factory.py                  # OS auto-detection factory
-│       ├── macos.py                    # macOS collector (AppKit, Quartz, pynput)
-│       ├── windows.py                  # Windows collector (pywin32, psutil, pynput)
-│       └── linux.py                    # Linux collector (xdotool, xprintidle, pynput)
-│
+│   ├── agent.py                # Main tracker loop (poll → batch → send)
+│   ├── platform.py             # Platform detection (macOS/Windows/Linux)
+│   ├── macos.py                # macOS collector (pyobjc)
+│   ├── windows.py              # Windows collector (pywin32)
+│   └── linux.py                # Linux collector (xdotool)
 ├── frontend/
 │   ├── __init__.py
-│   ├── dashboard.py                    # Streamlit user dashboard
-│   └── admin_dashboard.py             # Streamlit admin dashboard (leaderboard + drill-down)
-│
+│   ├── dashboard.py            # User Streamlit dashboard (port 8501)
+│   ├── admin_dashboard.py      # Admin Streamlit dashboard (port 8502)
+│   ├── ai_summary.py           # AI summary engine (OpenAI + fallback)
+│   └── pages/
+│       └── executive_summary.py # Executive summary page (Streamlit multipage)
 ├── installer/
-│   ├── __init__.py
 │   ├── mac/
-│   │   ├── __init__.py
-│   │   ├── launcher.py                # macOS .app entry point
-│   │   ├── build.py                   # PyInstaller build script (macOS)
-│   │   ├── build_config.py            # Baked-in backend URL
-│   │   ├── setup_gui.py              # First-run Tkinter setup wizard
-│   │   └── launchagent.py            # macOS LaunchAgent auto-start
+│   │   ├── build.py            # PyInstaller build → ZinniaAxion.app
+│   │   ├── launcher.py         # macOS app entry point
+│   │   ├── setup_gui.py        # First-run Tkinter setup (User ID)
+│   │   └── launchagent.py      # LaunchAgent for auto-start
 │   └── windows/
-│       ├── __init__.py
-│       ├── launcher.py                # Windows .exe entry point
-│       ├── build.py                   # PyInstaller build script (Windows)
-│       ├── build_config.py            # Baked-in backend URL
-│       ├── setup_gui.py              # First-run Tkinter setup wizard
-│       └── autostart.py              # Windows Task Scheduler auto-start
-│
-└── scripts/
-    └── migrate_sqlite_to_pg.py        # One-time SQLite → PostgreSQL migration
+│       ├── build.py            # PyInstaller build → ZinniaAxion.exe
+│       ├── launcher.py         # Windows exe entry point
+│       ├── setup_gui.py        # First-run Tkinter setup (User ID)
+│       └── autostart.py        # Task Scheduler / Startup folder
+├── scripts/
+│   └── migrate_sqlite_to_pg.py # One-time SQLite → PostgreSQL migration
+├── .github/
+│   └── workflows/
+│       └── build-windows.yml   # GitHub Actions: build Windows installer
+├── .env                        # Local configuration (not committed)
+├── .env.example                # Configuration template
+├── requirements.txt            # Core Python dependencies
+├── requirements-macos.txt      # macOS-specific dependencies
+├── requirements-windows.txt    # Windows-specific dependencies
+├── requirements-linux.txt      # Linux-specific dependencies
+├── ZinniaAxion.spec            # PyInstaller spec file
+├── UNINSTALL.md                # Uninstallation guide
+└── README.md                   # This file
 ```
 
 ---
 
 ## Quick Start (Developer)
 
-### 1. Clone & Install
+### Prerequisites
+
+- Python 3.10+
+- PostgreSQL (recommended) or SQLite
+- ngrok (for remote tracker access)
+
+### 1. Clone and set up
 
 ```bash
-git clone https://github.com/atharvatippe-dev/zinnia-axion.git
+git clone <repo-url> zinnia-axion
 cd zinnia-axion
-
 python -m venv .venv
-source .venv/bin/activate          # macOS/Linux
-# .venv\Scripts\activate           # Windows
+source .venv/bin/activate        # macOS/Linux
+# .venv\Scripts\activate         # Windows
+```
 
+### 2. Install dependencies
+
+```bash
 pip install -r requirements.txt
 
-# Install OS-specific dependencies
+# Platform-specific:
 pip install -r requirements-macos.txt      # macOS
 # pip install -r requirements-windows.txt  # Windows
 # pip install -r requirements-linux.txt    # Linux
+
+# Optional: for AI summaries
+pip install openai
 ```
 
-### 2. Configure
+### 3. Configure
 
 ```bash
 cp .env.example .env
-# Edit .env — adjust DATABASE_URI, app lists, thresholds, timezone, etc.
+# Edit .env — set DATABASE_URI, USER_ID, TIMEZONE, OPENAI_API_KEY, etc.
 ```
 
-### 3. Start the Backend
+### 4. Start all services
 
 ```bash
+# Terminal 1: Backend
 python -m backend.app
-```
 
-The Flask API starts on `http://127.0.0.1:5000`.
+# Terminal 2: ngrok (optional, for remote access)
+ngrok http 5000
 
-### 4. Start the Zinnia Axion Agent
+# Terminal 3: User Dashboard
+streamlit run frontend/dashboard.py --server.port 8501 --server.headless true
 
-```bash
+# Terminal 4: Admin Dashboard
+streamlit run frontend/admin_dashboard.py --server.port 8502 --server.headless true
+
+# Terminal 5: Tracker Agent
 python -m tracker.agent
 ```
 
-> **macOS note:** Grant Accessibility permissions to your terminal in System Settings → Privacy & Security → Accessibility for window title and input monitoring.
+### 5. Access
 
-### 5. Start the Dashboards
-
-```bash
-# User dashboard
-streamlit run frontend/dashboard.py --server.port 8501
-
-# Admin dashboard
-streamlit run frontend/admin_dashboard.py --server.port 8502
-```
-
-### 6. (Optional) Expose via ngrok
-
-```bash
-ngrok http 5000
-```
-
-Use the ngrok URL as the `BACKEND_URL` for remote Zinnia Axion Agents.
+| Service | URL |
+|---------|-----|
+| Backend API | http://localhost:5000 |
+| User Dashboard | http://localhost:8501 |
+| Admin Dashboard | http://localhost:8502 |
+| HTML Dashboard | http://localhost:5000/dashboard/default |
+| Health Check | http://localhost:5000/health |
 
 ---
 
 ## Deploying to Employees
 
-### Windows (.exe via GitHub Actions)
+### Option A: Standalone Installer (no Python needed)
 
-1. Go to **Actions** → **Build Windows Installer** → **Run workflow**
-2. Enter your backend URL (ngrok or server URL) and click **Run workflow**
-3. Wait ~2 minutes for the build to complete
-4. Download the **ZinniaAxion-Windows** artifact (`.zip` file)
-5. Unzip and share the `ZinniaAxion.exe` with employees via email, Slack, or file share
-6. Employee runs the `.exe` → enters their user ID and backend URL in the setup wizard → tracking starts automatically
-
-The `.exe` is fully self-contained (no Python installation required). It auto-starts on boot via Windows Task Scheduler.
-
-### macOS (.app)
-
+**macOS:**
 ```bash
-# From the project root on a Mac:
+export INSTALLER_BACKEND_URL=https://your-ngrok-url.ngrok-free.dev
 python installer/mac/build.py
+# Output: dist/ZinniaAxion.app — distribute to employees
 ```
 
-This produces `dist/ZinniaAxion.app`. Distribute the `.app` to macOS users. It auto-starts on login via a LaunchAgent.
+**Windows:**
+```bash
+set INSTALLER_BACKEND_URL=https://your-ngrok-url.ngrok-free.dev
+python installer/windows/build.py
+# Output: dist/ZinniaAxion.exe — distribute to employees
+```
+
+The installer:
+1. Opens a setup GUI on first run (employee enters their User ID)
+2. Saves config to `~/.zinnia-axion/.env`
+3. Installs auto-start (LaunchAgent on macOS, Task Scheduler on Windows)
+4. Starts the tracker silently in the background
+
+### Option B: GitHub Actions (Windows)
+
+Use the `build-windows.yml` workflow:
+1. Go to Actions → "Build Windows Installer"
+2. Enter the backend URL
+3. Download the artifact `ZinniaAxion-Windows`
+
+### Option C: Manual Setup
+
+On the employee's machine:
+```bash
+pip install -r requirements.txt -r requirements-<platform>.txt
+cp .env.example .env
+# Edit .env: set BACKEND_URL to ngrok URL, USER_ID to employee name
+python -m tracker.agent
+```
 
 ---
 
 ## Dashboards
 
-### 1. Admin Dashboard (Streamlit) — `http://localhost:8502`
+### User Dashboard (port 8501)
 
-For the admin/manager. Shows:
-- **Leaderboard:** All employees ranked by productive vs. non-productive time
-- **Per-user drill-down:** Click "View" to see an employee's non-productive apps, 7-day trend, and detailed breakdown
-- **Delete user:** Remove all data for a specific user
+Personal productivity view for individual employees.
 
-### 2. User Dashboard (Streamlit) — `http://localhost:8501`
+- **Metric cards** — productive time, non-productive time, total tracked
+- **State distribution** — horizontal bar showing productive vs. non-productive %
+- **Daily trend** — area chart of productive vs. non-productive over N days
+- **Productive vs. Non-Productive line chart** — daily line graph
+- **App-wise breakdown** — stacked horizontal bar per application
+- **Auto-refresh** — optional 30-second auto-refresh
+- **Per-user filtering** — via `?user_id=X` query parameter
 
-For the admin or local user. Shows:
-- Metric cards (productive %, non-productive %, total time)
-- State distribution (horizontal bar)
-- 7-day daily trend (stacked area + line chart)
-- App-wise breakdown (horizontal stacked bar)
+### Admin Dashboard (port 8502)
 
-### 3. HTML User Dashboard — `http://<backend>/dashboard/<user_id>`
+Central management view for administrators.
 
-For employees to view their own stats in a browser. **No installation required** — just visit the URL. Shows the same visualizations as the Streamlit user dashboard using Chart.js with auto-refresh every 30 seconds.
+- **Team metrics** — total users, avg productive %, avg non-productive %, total tracked time
+- **Summary link** — one-click access to AI-generated team report
+- **Leaderboard table** — all users ranked by non-productive % (highest first)
+  - Color-coded rows (red = high non-productive, green = high productive)
+  - **Tracker status column** — green dot (Online) / red dot (Offline, Xm ago)
+  - View and Delete actions per user
+- **User detail view** — click "View" for drill-down:
+  - Summary metrics
+  - Non-productive app breakdown chart
+  - 7-day daily trend line chart
+- **Auto-refresh** — 10-second auto-refresh (configurable)
 
-Employees running Zinnia Axion can access their dashboard at:
+### Summary Page
+
+Accessible from the admin dashboard via the "View Summary" button.
+
+- **Team metrics row** — team size, avg productive %, total productive minutes, total tracked
+- **AI-generated report** (OpenAI) with sections:
+  - Executive Summary (3–5 sentence overview)
+  - What's Going Well (3 bullets)
+  - What Needs Attention (2–3 bullets)
+  - Recommended Next Steps (3 bullets)
+  - Data Note
+- **Heuristic fallback** when OpenAI is unavailable
+- **Regenerate button** — force a fresh summary
+- **5-minute cache** — avoids redundant API calls
+
+### HTML Dashboard
+
+Self-contained HTML page served by the backend. Accessible remotely via ngrok.
+
 ```
-http://<ngrok-url>/dashboard/<their-user-id>
+http://localhost:5000/dashboard/<user_id>
+https://<ngrok-url>/dashboard/<user_id>
 ```
 
 ---
 
 ## API Reference
 
+### Telemetry
+
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `POST` | `/track` | Ingest a batch of telemetry events |
-| `GET` | `/summary/today?user_id=X` | Today's productivity totals for a user |
-| `GET` | `/apps?user_id=X` | Per-app breakdown for today |
-| `GET` | `/daily?user_id=X&days=7` | Daily time-series of productivity totals |
-| `GET` | `/dashboard/<user_id>` | Self-contained HTML dashboard for a user |
+| `POST` | `/track` | Ingest batch of telemetry events |
 | `GET` | `/health` | Health check |
-| `GET` | `/db-stats` | Database statistics |
-| `POST` | `/cleanup` | Purge events older than retention period |
+
+### Productivity Queries
+
+| Method | Endpoint | Query Params | Description |
+|--------|----------|-------------|-------------|
+| `GET` | `/summary/today` | `?user_id=X` | Today's productive/non-productive totals |
+| `GET` | `/apps` | `?user_id=X` | Per-app breakdown for today |
+| `GET` | `/daily` | `?days=7&user_id=X` | Daily time-series |
+| `GET` | `/dashboard/<user_id>` | — | Self-contained HTML dashboard |
+
+### Admin
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
 | `GET` | `/admin/leaderboard` | All users ranked by non-productive % |
-| `GET` | `/admin/user/<user_id>/non-productive-apps` | Non-productive app breakdown for a user |
-| `DELETE` | `/admin/user/<user_id>` | Delete all events for a user |
+| `GET` | `/admin/user/<id>/non-productive-apps` | Non-productive apps for a user today |
+| `GET` | `/admin/tracker-status` | Online/offline status of all trackers |
+| `DELETE` | `/admin/user/<id>` | Delete all data for a user |
+
+### Maintenance
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/cleanup` | Manually purge old events |
+| `GET` | `/db-stats` | Database size, event count, date range |
 
 ### POST /track — Request Body
 
@@ -327,118 +409,229 @@ http://<ngrok-url>/dashboard/<their-user-id>
 {
   "events": [
     {
-      "user_id": "john.doe",
-      "timestamp": "2026-02-18T14:30:00+05:30",
-      "app_name": "Code",
-      "window_title": "main.py - my-project",
-      "keystroke_count": 42,
+      "user_id": "john",
+      "timestamp": "2026-02-24T10:30:00+05:30",
+      "app_name": "Google Chrome",
+      "window_title": "GitHub - Pull Request",
+      "keystroke_count": 15,
       "mouse_clicks": 3,
-      "mouse_distance": 1200.5,
-      "idle_seconds": 0.8,
+      "mouse_distance": 245.7,
+      "idle_seconds": 2.1,
       "distraction_visible": false
     }
   ]
 }
 ```
 
+### GET /admin/tracker-status — Response
+
+```json
+[
+  {
+    "user_id": "default",
+    "last_seen": "2026-02-24T13:20:29.908474",
+    "seconds_ago": 6,
+    "status": "online"
+  },
+  {
+    "user_id": "wasim",
+    "last_seen": "2026-02-24T13:04:23.963340",
+    "seconds_ago": 966,
+    "status": "offline"
+  }
+]
+```
+
 ---
 
 ## Configuration
 
-All settings are controlled via the `.env` file (see `.env.example` for full documentation).
+All configuration is via `.env` in the project root. See `.env.example` for the full template.
 
-### Backend & Database
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `FLASK_HOST` | `127.0.0.1` | Backend bind address |
-| `FLASK_PORT` | `5000` | Backend port |
-| `DATABASE_URI` | `sqlite:///telemetry.db` | SQLAlchemy database URI (SQLite or PostgreSQL) |
-| `DATA_RETENTION_DAYS` | `14` | Auto-purge events older than N days (0 = keep forever) |
-| `TIMEZONE` | `UTC` | Local timezone for day boundary calculations |
-
-### Zinnia Axion Agent
+### Backend
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `BACKEND_URL` | `http://127.0.0.1:5000` | URL the Zinnia Axion Agent POSTs to |
-| `POLL_INTERVAL_SEC` | `1` | Sampling interval (seconds) |
-| `BATCH_INTERVAL_SEC` | `10` | Batch flush interval (seconds) |
-| `BUFFER_FILE` | `~/.telemetry-tracker/buffer.json` | Local buffer for offline resilience |
-| `USER_ID` | `default` | User identifier sent with each event |
-| `WINDOW_TITLE_MODE` | `full` | Title capture mode: `full`, `redacted`, or `off` |
+| `FLASK_HOST` | `127.0.0.1` | Bind address (`0.0.0.0` for remote access) |
+| `FLASK_PORT` | `5000` | Server port |
+| `DATABASE_URI` | `sqlite:///telemetry.db` | SQLAlchemy connection string |
+| `DATA_RETENTION_DAYS` | `14` | Auto-purge events older than this (0 = keep all) |
+| `TIMEZONE` | `Asia/Kolkata` | IANA timezone for day boundaries |
+
+### Tracker Agent
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `BACKEND_URL` | `http://127.0.0.1:5000` | Backend URL (use ngrok URL for remote) |
+| `USER_ID` | `default` | Unique identifier for this employee |
+| `POLL_INTERVAL_SEC` | `1` | How often to sample (seconds) |
+| `BATCH_INTERVAL_SEC` | `10` | How often to send batches |
+| `BUFFER_FILE` | `tracker/buffer.json` | Offline buffer file path |
+| `WAKE_THRESHOLD_SEC` | `30` | Gap threshold for sleep/wake detection |
+| `WINDOW_TITLE_MODE` | `full` | `full` / `redacted` / `off` |
+| `GHOST_APPS` | *(system apps)* | Apps to ignore when no interaction |
 
 ### Productivity Thresholds
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `BUCKET_SIZE_SEC` | `60` | Bucket width for productivity inference |
-| `PRODUCTIVE_INTERACTION_THRESHOLD` | `10` | Min combined interactions for "productive" |
-| `PRODUCTIVE_KEYSTROKE_THRESHOLD` | `5` | Min keystrokes alone for "productive" |
-| `PRODUCTIVE_MOUSE_THRESHOLD` | `3` | Min mouse clicks alone for "productive" |
-| `MOUSE_MOVEMENT_THRESHOLD` | `50` | Min mouse pixels for active presence |
-| `IDLE_AWAY_THRESHOLD` | `30` | Seconds idle before user is "away" |
-| `MOUSE_MOVEMENT_MIN_SAMPLES` | `15` | Anti-wiggle: min 1s samples with movement |
-| `DISTRACTION_MIN_RATIO` | `0.3` | Fraction of samples with distraction to block reading pathway |
+| `BUCKET_SIZE_SEC` | `10` | Time window for productivity classification |
+| `PRODUCTIVE_INTERACTION_THRESHOLD` | `2` | Min keystrokes + clicks per bucket |
+| `PRODUCTIVE_KEYSTROKE_THRESHOLD` | `1` | Min keystrokes alone per bucket |
+| `PRODUCTIVE_MOUSE_THRESHOLD` | `1` | Min mouse clicks alone per bucket |
+| `MOUSE_MOVEMENT_THRESHOLD` | `8` | Min mouse movement (pixels) for reading detection |
+| `IDLE_AWAY_THRESHOLD` | `30` | Seconds idle before user is considered away |
+| `MOUSE_MOVEMENT_MIN_SAMPLES` | `3` | Min samples with movement (anti-wiggle) |
+
+### Anti-Cheat
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MIN_ZERO_SAMPLE_RATIO` | `0.25` | Min fraction of zero-interaction samples (natural typing has pauses) |
+| `MIN_DISTINCT_VALUES` | `2` | Min distinct per-sample interaction values |
+
+### Distraction Detection
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DISTRACTION_MIN_RATIO` | `0.3` | Fraction of samples with visible distraction to block reading pathway |
 
 ### App Classification
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `NON_PRODUCTIVE_APPS` | `youtube,netflix,reddit,...` | Always non-productive |
-| `MEETING_APPS` | `zoom,microsoft teams,...` | Always productive (calls/meetings) |
-| `BROWSER_APPS` | `safari,google chrome,...` | Parsed for website-level breakdown |
-| `GHOST_APPS` | *(OS-specific)* | Transient system windows to ignore |
+| `NON_PRODUCTIVE_APPS` | `youtube,netflix,reddit,...` | Always classified as non-productive |
+| `MEETING_APPS` | `zoom,microsoft teams,...` | Always classified as productive |
+| `BROWSER_APPS` | `safari,chrome,...` | Enables per-website breakdown in dashboard |
+
+### Frontend & AI
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `API_BASE_URL` | `http://127.0.0.1:5000` | Backend URL for Streamlit dashboards |
+| `OPENAI_API_KEY` | *(empty)* | Enables AI-generated summaries |
+| `OPENAI_MODEL` | `gpt-4o-mini` | Model for AI summaries |
 
 ---
 
 ## Security & Anti-Cheat
 
-| Mechanism | Description |
-|-----------|-------------|
-| **No keystroke content** | Only counts are recorded — never the actual keys pressed |
-| **Window title redaction** | Configurable: `full`, `redacted`, or `off` |
-| **Local-first** | Data stays on your infrastructure (self-hosted backend + database) |
-| **Offline buffer** | Events buffered locally if backend is unreachable — never sent to third parties |
-| **Anti-auto-clicker** | Zero-sample ratio + distinct-value checks detect macro/bot tools |
-| **Anti-mouse-wiggle** | Requires sustained mouse movement (≥15 samples/bucket) to count as "reading" |
-| **Multi-monitor distraction** | Detects non-productive apps visible on any monitor (macOS) |
-| **Sleep/wake handling** | Skips inflated post-wake samples, caps idle values |
+### Anti-Cheat Detection
+
+The system detects fake productivity from auto-clickers and key repeaters:
+
+1. **Zero-sample ratio** — Real typing is bursty (fast bursts then pauses). Auto-clickers produce constant input with no gaps. If fewer than 25% of samples have zero interaction, the bucket is flagged as suspicious.
+
+2. **Distinct values** — Real typing produces varied keystroke counts per sample. Auto-clickers produce 1–2 repeating values. If fewer than 2 distinct per-sample interaction values are found, the bucket is flagged.
+
+3. **Both conditions must trigger** — A bucket is only marked suspicious when both checks fail simultaneously, reducing false positives.
+
+### Multi-Monitor Distraction Detection
+
+- The tracker scans **all visible windows** across all monitors (not just the focused app)
+- Uses `CGWindowListCopyWindowInfo` on macOS, `EnumWindows` on Windows
+- If a non-productive app (YouTube, Netflix, etc.) is visible on another monitor, split-view, or Picture-in-Picture, the sample is flagged `distraction_visible = true`
+- If ≥ 30% of samples in a bucket are flagged, the "active presence" (reading) pathway is blocked — the user is likely watching the distraction
+
+### Sleep/Wake Detection
+
+- If the gap between consecutive tracker samples exceeds `WAKE_THRESHOLD_SEC` (default 30s), the system assumes the machine was asleep
+- On wake: flushes pre-sleep batch, resets input counters, skips the first inflated-idle sample
+
+---
+
+## Privacy
+
+Zinnia Axion is designed with privacy as a core principle:
+
+| What | Captured? | Details |
+|------|-----------|---------|
+| Keystroke **content** | **Never** | Only counts are recorded |
+| Mouse click **targets** | **Never** | Only click counts |
+| Window titles | **Configurable** | `full`, `redacted` (keywords only), or `off` |
+| Screenshots | **Never** | No visual capture |
+| File contents | **Never** | No file access |
+| Browsing URLs | **Never** | Only app name + window title (if enabled) |
+| AI summary data | **Aggregated only** | No window titles or personal data sent to OpenAI |
+
+### Window Title Modes
+
+| Mode | Example Window Title | Stored As |
+|------|---------------------|-----------|
+| `full` | "RE: Salary Review - Gmail" | "RE: Salary Review - Gmail" |
+| `redacted` | "RE: Salary Review - Gmail" | "gmail" |
+| `off` | "RE: Salary Review - Gmail" | *(empty)* |
+
+---
+
+## Database
+
+### Supported Databases
+
+- **PostgreSQL** (recommended for production)
+- **SQLite** (default, good for development)
+
+### Migration: SQLite → PostgreSQL
+
+```bash
+# 1. Set up PostgreSQL
+createdb telemetry_db
+createuser telemetry_user
+psql -c "ALTER USER telemetry_user PASSWORD 'telemetry_pass';"
+psql -c "GRANT ALL PRIVILEGES ON DATABASE telemetry_db TO telemetry_user;"
+
+# 2. Update .env
+# DATABASE_URI=postgresql://telemetry_user:telemetry_pass@localhost:5432/telemetry_db
+
+# 3. Run migration script
+python scripts/migrate_sqlite_to_pg.py
+```
+
+### Schema
+
+**telemetry_events** table:
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | Integer (PK) | Auto-increment |
+| `user_id` | String(128) | Employee identifier |
+| `timestamp` | DateTime | UTC timestamp of the sample |
+| `app_name` | String(256) | Active application name |
+| `window_title` | String(1024) | Window/tab title (respects privacy mode) |
+| `keystroke_count` | Integer | Keystrokes in the interval (count only) |
+| `mouse_clicks` | Integer | Mouse clicks in the interval |
+| `mouse_distance` | Float | Mouse travel in pixels |
+| `idle_seconds` | Float | OS-reported idle time |
+| `distraction_visible` | Boolean | Non-productive app visible on another screen |
 
 ---
 
 ## Uninstallation
 
-See [UNINSTALL.md](UNINSTALL.md) for detailed step-by-step instructions for both Windows and macOS.
+See [UNINSTALL.md](UNINSTALL.md) for platform-specific uninstallation instructions.
 
 **Quick summary:**
-- **Windows:** End task → delete scheduled task → delete config folder → delete `.exe` and `.zip`
-- **macOS:** Quit app → unload LaunchAgent → delete config folder → delete `.app`
 
-> Note: Uninstalling Zinnia Axion from an employee's machine stops future data collection. Historical data already on the server persists until the admin deletes it via the Admin Dashboard.
+**macOS:**
+```bash
+# Remove LaunchAgent
+launchctl unload ~/Library/LaunchAgents/com.telemetry.tracker.plist
+rm ~/Library/LaunchAgents/com.telemetry.tracker.plist
+# Remove app and config
+rm -rf /Applications/ZinniaAxion.app ~/.zinnia-axion
+```
 
----
-
-## Known Limitations & Roadmap
-
-See [TODO.md](TODO.md) for the full list of known loopholes and their status.
-
-**Solved:**
-- Multi-monitor / split-screen / PiP distraction detection
-- Meeting app classification
-- Privacy (window title redaction)
-- Anti-cheat (auto-clickers, mouse wigglers)
-- Sleep/wake handling
-- Database growth (auto-retention)
-- Timezone support
-
-**Open:**
-- Browser background tabs (requires browser extension)
-- Remote Desktop / VM visibility (niche edge case)
-- Enterprise features: SSO/authentication, centralized config push, role-based access
+**Windows:**
+```powershell
+# Remove scheduled task
+schtasks /Delete /TN "ZinniaAxion" /F
+# Remove app and config
+Remove-Item -Recurse "$env:LOCALAPPDATA\ZinniaAxion"
+Remove-Item -Recurse "$env:USERPROFILE\.zinnia-axion"
+```
 
 ---
 
 ## License
 
-Private / Internal use.
+Internal use only. All rights reserved.

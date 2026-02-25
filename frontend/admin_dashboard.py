@@ -3,7 +3,7 @@ Zinnia Axion Admin Dashboard — Central Productivity Leaderboard.
 
 Two-page layout driven by URL query parameters:
   Page 1 (default)  — Leaderboard table with "View" links per user
-  Page 2 (?user_id) — User detail: non-productive app breakdown + 7-day trend
+  Page 2 (?user_id) — User detail: app breakdown + 7-day trend
 
 Run with:
     streamlit run frontend/admin_dashboard.py --server.port 8502 --server.headless true
@@ -11,11 +11,12 @@ Run with:
 
 from __future__ import annotations
 
+import base64
 import os
+from datetime import datetime, timedelta, date as _date_cls
 from pathlib import Path
 
 import time as _time_module
-from datetime import datetime
 
 import requests
 import streamlit as st
@@ -23,49 +24,402 @@ import pandas as pd
 import plotly.express as px
 from dotenv import load_dotenv
 
-from ai_summary import get_summary, OPENAI_API_KEY
+from ai_summary import get_executive_summary, OPENAI_API_KEY
 
-# Load .env from project root
 _project_root = Path(__file__).resolve().parent.parent
 load_dotenv(_project_root / ".env")
 
 API_BASE = os.getenv("API_BASE_URL", "http://127.0.0.1:5000")
+_LOGO_PATH = _project_root / "Zinnia_Logo_VERTICAL_FC-WHT_RGB (1).png"
 
-# ── Page config ─────────────────────────────────────────────────────
+# ── Page config ──────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="Admin — Zinnia Axion Dashboard",
+    page_title="Admin — Zinnia Axion",
     page_icon="🏢",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
 
-# ── Compact enterprise CSS ──────────────────────────────────────────
+# ── Load logo as base64 ─────────────────────────────────────────────
+_logo_b64 = ""
+if _LOGO_PATH.exists():
+    _logo_b64 = base64.b64encode(_LOGO_PATH.read_bytes()).decode()
+
+# ── CSS — Adaptive light / dark enterprise design ────────────────────
 st.markdown(
     """
     <style>
-    .block-container { padding-top: 2.5rem; padding-bottom: 0.5rem; }
-    [data-testid="stMetric"] { padding: 0.4rem 0; }
-    [data-testid="stMetricValue"] { font-size: 1.3rem; }
-    [data-testid="stMetricLabel"] { font-size: 0.85rem; }
-    .element-container { margin-bottom: -0.15rem; }
+    /* ═══ LIGHT MODE (default) — Enterprise ═══ */
+    :root {
+        --za-canvas: #f7f9fc;
+        --za-surface: #ffffff;
+        --za-surface-hover: #f1f5f9;
+        --za-border: #e2e8f0;
+        --za-text: #0f172a;
+        --za-text-body: #334155;
+        --za-text-muted: #64748b;
+        --za-text-faint: #94a3b8;
+        --za-th-bg: #f1f5f9;
+        --za-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
+        --za-shadow-hover: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.04);
+        --za-green: #059669;
+        --za-red: #dc2626;
+        --za-amber: #d97706;
+        --za-green-bg: #ecfdf5;  --za-green-bdr: #a7f3d0;
+        --za-red-bg: #fef2f2;    --za-red-bdr: #fecaca;
+        --za-amber-bg: #fffbeb;  --za-amber-bdr: #fde68a;
+        --za-neutral-bg: #f1f5f9; --za-neutral-bdr: #e2e8f0;
+        --za-btn: #1e40af;        --za-btn-hover: #1e3a8a;
+        --za-del-bg: #ffffff;     --za-del-hover: #fef2f2;
+        --za-back-bg: #eff6ff;    --za-back-bdr: #bfdbfe;
+        --za-back-hover: #dbeafe;
+        --za-chart-text: #334155;
+        --za-row-stripe: #f8fafc;
+    }
+
+    /* ═══ DARK MODE — triggered by OS preference (initial load) ═══ */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --za-canvas: #0e1117;
+        --za-surface: #1a1d2e;
+        --za-surface-hover: #22253a;
+        --za-border: rgba(255,255,255,0.07);
+        --za-text: #f1f5f9;
+        --za-text-body: #cbd5e1;
+        --za-text-muted: #94a3b8;
+        --za-text-faint: #475569;
+        --za-th-bg: rgba(0,0,0,0.25);
+        --za-shadow: 0 2px 8px rgba(0,0,0,0.25);
+        --za-shadow-hover: 0 4px 16px rgba(0,0,0,0.35);
+        --za-green: #4ade80;
+        --za-red: #f87171;
+        --za-amber: #fbbf24;
+        --za-green-bg: rgba(34,197,94,0.12);  --za-green-bdr: rgba(34,197,94,0.30);
+        --za-red-bg: rgba(239,68,68,0.12);    --za-red-bdr: rgba(239,68,68,0.30);
+        --za-amber-bg: rgba(251,191,36,0.12); --za-amber-bdr: rgba(251,191,36,0.30);
+        --za-neutral-bg: rgba(100,116,139,0.12); --za-neutral-bdr: rgba(100,116,139,0.30);
+        --za-btn: #3b82f6;        --za-btn-hover: #60a5fa;
+        --za-del-bg: rgba(239,68,68,0.08);  --za-del-hover: rgba(239,68,68,0.18);
+        --za-back-bg: rgba(96,165,250,0.10); --za-back-bdr: rgba(96,165,250,0.25);
+        --za-back-hover: rgba(96,165,250,0.20);
+        --za-chart-text: #94a3b8;
+        --za-row-stripe: rgba(255,255,255,0.02);
+      }
+    }
+
+    /* ═══ DARK MODE — triggered by Streamlit in-app toggle (JS-detected) ═══ */
+    :root[data-za-theme="dark"] {
+        --za-canvas: #0e1117;
+        --za-surface: #1a1d2e;
+        --za-surface-hover: #22253a;
+        --za-border: rgba(255,255,255,0.07);
+        --za-text: #f1f5f9;
+        --za-text-body: #cbd5e1;
+        --za-text-muted: #94a3b8;
+        --za-text-faint: #475569;
+        --za-th-bg: rgba(0,0,0,0.25);
+        --za-shadow: 0 2px 8px rgba(0,0,0,0.25);
+        --za-shadow-hover: 0 4px 16px rgba(0,0,0,0.35);
+        --za-green: #4ade80;
+        --za-red: #f87171;
+        --za-amber: #fbbf24;
+        --za-green-bg: rgba(34,197,94,0.12);  --za-green-bdr: rgba(34,197,94,0.30);
+        --za-red-bg: rgba(239,68,68,0.12);    --za-red-bdr: rgba(239,68,68,0.30);
+        --za-amber-bg: rgba(251,191,36,0.12); --za-amber-bdr: rgba(251,191,36,0.30);
+        --za-neutral-bg: rgba(100,116,139,0.12); --za-neutral-bdr: rgba(100,116,139,0.30);
+        --za-btn: #3b82f6;        --za-btn-hover: #60a5fa;
+        --za-del-bg: rgba(239,68,68,0.08);  --za-del-hover: rgba(239,68,68,0.18);
+        --za-back-bg: rgba(96,165,250,0.10); --za-back-bdr: rgba(96,165,250,0.25);
+        --za-back-hover: rgba(96,165,250,0.20);
+        --za-chart-text: #94a3b8;
+        --za-row-stripe: rgba(255,255,255,0.02);
+    }
+
+    /* ═══ LIGHT MODE — force override when JS detects light ═══ */
+    :root[data-za-theme="light"] {
+        --za-canvas: #f7f9fc;
+        --za-surface: #ffffff;
+        --za-surface-hover: #f1f5f9;
+        --za-border: #e2e8f0;
+        --za-text: #0f172a;
+        --za-text-body: #334155;
+        --za-text-muted: #64748b;
+        --za-text-faint: #94a3b8;
+        --za-th-bg: #f1f5f9;
+        --za-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
+        --za-shadow-hover: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.04);
+        --za-green: #059669;
+        --za-red: #dc2626;
+        --za-amber: #d97706;
+        --za-green-bg: #ecfdf5;  --za-green-bdr: #a7f3d0;
+        --za-red-bg: #fef2f2;    --za-red-bdr: #fecaca;
+        --za-amber-bg: #fffbeb;  --za-amber-bdr: #fde68a;
+        --za-neutral-bg: #f1f5f9; --za-neutral-bdr: #e2e8f0;
+        --za-btn: #1e40af;        --za-btn-hover: #1e3a8a;
+        --za-del-bg: #ffffff;     --za-del-hover: #fef2f2;
+        --za-back-bg: #eff6ff;    --za-back-bdr: #bfdbfe;
+        --za-back-hover: #dbeafe;
+        --za-chart-text: #334155;
+        --za-row-stripe: #f8fafc;
+    }
+
+    /* ── Streamlit overrides ── */
+    .block-container {
+        padding: 2rem 3rem 1rem 3rem !important;
+        max-width: 100% !important;
+    }
+    .element-container { margin-bottom: 0; }
+    [data-testid="stMetric"] { display: none; }
     .stPlotlyChart { margin-top: -0.5rem; margin-bottom: -0.5rem; }
-    .row-widget.stDataFrame { font-size: 0.9rem; }
+    [data-testid="stSidebar"] {
+        border-right: 1px solid var(--za-border) !important;
+    }
+
+    /* ── Header bar (brand strip) ── */
+    .za-header {
+        display: flex; align-items: center; gap: 20px;
+        padding: 18px 28px;
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        border-radius: 12px;
+        margin-bottom: 28px;
+        box-shadow: 0 2px 8px rgba(15,23,42,0.10);
+    }
+    .za-logo { height: 40px; width: auto; flex-shrink: 0; }
+    .za-brand { display: flex; flex-direction: column; gap: 2px; }
+    .za-title {
+        font-size: 1.35rem; font-weight: 700; color: #f8fafc;
+        letter-spacing: -0.3px; line-height: 1.2;
+    }
+    .za-subtitle {
+        font-size: 0.6rem; color: #94a3b8;
+        text-transform: uppercase; letter-spacing: 2.5px;
+        font-weight: 500;
+    }
+    .za-spacer { flex: 1; }
+    .za-date {
+        font-size: 0.8rem; color: #94a3b8;
+        text-align: right; font-weight: 500;
+    }
+
+    /* ── Metric cards ── */
+    .za-metrics {
+        display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+        margin-bottom: 28px;
+    }
+    .za-card {
+        background: var(--za-surface);
+        border-radius: 10px; padding: 20px 22px;
+        border: 1px solid var(--za-border);
+        position: relative; overflow: hidden;
+        box-shadow: var(--za-shadow);
+        transition: box-shadow 0.2s, transform 0.2s, background 0.3s;
+    }
+    .za-card:hover {
+        box-shadow: var(--za-shadow-hover);
+        transform: translateY(-1px);
+    }
+    .za-card::before {
+        content: ''; position: absolute; top: 0; left: 0;
+        width: 3px; height: 100%; border-radius: 0 2px 2px 0;
+    }
+    .za-card.card-neutral::before { background: #94a3b8; }
+    .za-card.card-green::before  { background: #059669; }
+    .za-card.card-red::before    { background: #dc2626; }
+    .za-card.card-amber::before  { background: #d97706; }
+    .za-card-label {
+        font-size: 0.68rem; color: var(--za-text-muted);
+        text-transform: uppercase; letter-spacing: 1px;
+        font-weight: 600; margin-bottom: 10px;
+    }
+    .za-card-value {
+        font-size: 1.9rem; font-weight: 700; color: var(--za-text);
+        line-height: 1; letter-spacing: -0.3px;
+    }
+    .za-card-value.green { color: var(--za-green); }
+    .za-card-value.red   { color: var(--za-red); }
+    .za-card-value.amber { color: var(--za-amber); }
+
+    /* ── Section divider ── */
+    .za-section {
+        font-size: 0.7rem; text-transform: uppercase;
+        letter-spacing: 1.5px; color: var(--za-text-muted);
+        font-weight: 600; margin: 8px 0 16px 0;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--za-border);
+    }
+
+    /* ── Leaderboard table ── */
+    .za-table-wrap {
+        background: var(--za-surface);
+        border-radius: 10px; overflow: hidden;
+        border: 1px solid var(--za-border);
+        box-shadow: var(--za-shadow);
+        transition: background 0.3s;
+    }
+    .leader-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    .leader-table th {
+        text-align: left; padding: 14px 22px;
+        font-weight: 600; font-size: 0.68rem;
+        text-transform: uppercase; letter-spacing: 0.8px;
+        color: var(--za-text-muted); background: var(--za-th-bg);
+        border-bottom: 1px solid var(--za-border);
+    }
+    .leader-table td {
+        padding: 14px 22px;
+        border-bottom: 1px solid var(--za-border);
+        vertical-align: middle;
+        color: var(--za-text-body);
+    }
+    .leader-table tbody tr { transition: background-color 0.15s; }
+    .leader-table tbody tr:nth-child(even) { background-color: var(--za-row-stripe); }
+    .leader-table tbody tr:hover { background-color: var(--za-surface-hover) !important; }
+    .leader-table tbody tr:last-child td { border-bottom: none; }
+    .user-name { font-weight: 600; font-size: 0.92rem; color: var(--za-text); }
+
+    /* ── Status badges ── */
+    .status-badge {
+        display: inline-flex; align-items: center; gap: 6px;
+        font-size: 0.8rem; font-weight: 500; color: var(--za-text-muted);
+    }
+    .status-badge .dot {
+        width: 8px; height: 8px; border-radius: 50%;
+        display: inline-block;
+    }
+    .dot-online { background: #059669; box-shadow: 0 0 6px rgba(5,150,105,0.45); }
+    .dot-offline { background: #dc2626; }
+    .dot-unknown { background: #94a3b8; }
+
+    /* ── Percentage badges ── */
+    .pct-badge {
+        display: inline-block; padding: 4px 12px; border-radius: 6px;
+        font-weight: 600; font-size: 0.8rem;
+    }
+    .pct-badge-red    { background: var(--za-red-bg);    color: var(--za-red);   border: 1px solid var(--za-red-bdr); }
+    .pct-badge-green  { background: var(--za-green-bg);  color: var(--za-green); border: 1px solid var(--za-green-bdr); }
+    .pct-badge-amber  { background: var(--za-amber-bg);  color: var(--za-amber); border: 1px solid var(--za-amber-bdr); }
+    .pct-badge-neutral{ background: var(--za-neutral-bg); color: var(--za-text-muted); border: 1px solid var(--za-neutral-bdr); }
+
+    /* ── Action buttons ── */
+    .action-link {
+        font-weight: 600; text-decoration: none;
+        padding: 6px 16px; border-radius: 6px;
+        font-size: 0.78rem; transition: all 0.15s;
+        display: inline-block; cursor: pointer;
+    }
+    .action-view {
+        background: var(--za-btn); color: #ffffff !important;
+        box-shadow: 0 1px 2px rgba(30,64,175,0.18);
+    }
+    .action-view:hover {
+        background: var(--za-btn-hover);
+        box-shadow: 0 2px 4px rgba(30,64,175,0.25);
+    }
+    .action-delete {
+        background: var(--za-del-bg); color: var(--za-red) !important;
+        border: 1px solid var(--za-red-bdr);
+    }
+    .action-delete:hover { background: var(--za-del-hover); }
+
+    /* ── Footer ── */
+    .za-footer {
+        margin-top: 32px; padding-top: 16px;
+        border-top: 1px solid var(--za-border);
+        display: flex; justify-content: space-between; align-items: center;
+    }
+    .za-footer span { font-size: 0.7rem; color: var(--za-text-faint); font-weight: 500; }
+
+    /* ── Back link ── */
+    .za-back {
+        display: inline-flex; align-items: center; gap: 6px;
+        font-size: 0.85rem; color: var(--za-btn); text-decoration: none;
+        font-weight: 600; margin-bottom: 8px;
+        padding: 6px 14px; border-radius: 8px;
+        background: var(--za-back-bg); border: 1px solid var(--za-back-bdr);
+        transition: all 0.15s;
+    }
+    .za-back:hover { background: var(--za-back-hover); }
+
+    /* ── Detail page heading ── */
+    .za-detail-title {
+        font-size: 1.4rem; font-weight: 700; color: var(--za-text);
+        margin: 4px 0 22px 0; letter-spacing: -0.2px;
+    }
+
+    /* ── Streamlit button overrides ── */
+    .stButton > button[kind="primary"] {
+        background: var(--za-btn) !important;
+        color: white !important;
+        border: none !important;
+        font-weight: 600 !important;
+        padding: 0.5rem 1.3rem !important;
+        border-radius: 8px !important;
+        box-shadow: 0 1px 2px rgba(30,64,175,0.15) !important;
+        transition: all 0.15s !important;
+        font-size: 0.85rem !important;
+    }
+    .stButton > button[kind="primary"]:hover {
+        background: var(--za-btn-hover) !important;
+        box-shadow: 0 2px 4px rgba(30,64,175,0.22) !important;
+    }
+    .stButton > button {
+        border-radius: 8px !important;
+        font-weight: 500 !important;
+        transition: all 0.15s !important;
+    }
+
+    /* ── Summary dialog polish ── */
+    [data-testid="stModal"] > div {
+        border-radius: 12px !important;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.12) !important;
+    }
+    [data-testid="stModal"] [data-testid="stMarkdownContainer"] h2 {
+        font-size: 1.1rem; font-weight: 700; color: var(--za-text);
+        margin-bottom: 8px;
+    }
+    [data-testid="stModal"] [data-testid="stMarkdownContainer"] ul {
+        padding-left: 18px;
+    }
+
+    /* ── Plotly chart wrapper ── */
+    .stPlotlyChart > div { border-radius: 8px; }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
-STATE_COLORS = {
-    "productive": "#22c55e",
-    "non_productive": "#ef4444",
-}
-STATE_LABELS = {
-    "productive": "Productive",
-    "non_productive": "Non-Productive",
-}
+# ── JS — Detect Streamlit theme toggle and set data attribute ────────
+import streamlit.components.v1 as _components
+_components.html("""
+<script>
+(function() {
+  var doc = window.parent.document;
+  function detect() {
+    var el = doc.querySelector('[data-testid="stAppViewContainer"]');
+    if (!el) return;
+    var bg = getComputedStyle(el).backgroundColor;
+    var m = bg.match(/\\d+/g);
+    if (m) {
+      var brightness = (parseInt(m[0]) + parseInt(m[1]) + parseInt(m[2])) / 3;
+      doc.documentElement.setAttribute('data-za-theme', brightness < 128 ? 'dark' : 'light');
+    }
+  }
+  detect();
+  setInterval(detect, 500);
+})();
+</script>
+""", height=0)
+
+STATE_COLORS = {"productive": "#059669", "non_productive": "#dc2626"}
+STATE_LABELS = {"productive": "Productive", "non_productive": "Non-Productive"}
+
+_CHART_LAYOUT = dict(
+    paper_bgcolor="rgba(0,0,0,0)",
+    plot_bgcolor="rgba(0,0,0,0)",
+    font=dict(family="system-ui, -apple-system, sans-serif", color="#64748b", size=12),
+)
 
 
-# ── API helpers ─────────────────────────────────────────────────────
+# ── API helpers ──────────────────────────────────────────────────────
 
 def _get(path: str, params: dict | None = None):
     try:
@@ -88,7 +442,6 @@ def _delete(path: str):
 
 
 def _fmt(seconds: float) -> str:
-    """Format seconds as '2h 15m' or '45s'."""
     s = int(seconds)
     if s < 60:
         return f"{s}s"
@@ -104,17 +457,30 @@ def _fmt(seconds: float) -> str:
     return " ".join(parts)
 
 
-# ── Sidebar ─────────────────────────────────────────────────────────
+def _pct_badge(value: float, invert: bool = False) -> str:
+    if invert:
+        cls = "pct-badge-red" if value >= 50 else ("pct-badge-amber" if value >= 35 else "pct-badge-green")
+    else:
+        cls = "pct-badge-green" if value >= 55 else ("pct-badge-amber" if value >= 40 else "pct-badge-red")
+    return f'<span class="pct-badge {cls}">{value:.1f}%</span>'
+
+
+# ── Sidebar ──────────────────────────────────────────────────────────
 with st.sidebar:
+    if _logo_b64:
+        st.markdown(
+            f'<div style="text-align:center; padding:20px 0 12px;">'
+            f'<img src="data:image/png;base64,{_logo_b64}" style="height:80px;"></div>',
+            unsafe_allow_html=True,
+        )
     st.markdown("**Admin Settings**")
     auto_refresh = st.checkbox("Auto-refresh (10 s)", value=True)
 
-# ── Route: read query params ────────────────────────────────────────
+# ── Query params ─────────────────────────────────────────────────────
 _qp = st.query_params
 selected_user_id = _qp.get("user_id", None)
 _delete_uid = _qp.get("delete_user", None)
 
-# ── Handle delete action ────────────────────────────────────────────
 if _delete_uid:
     result = _delete(f"/admin/user/{_delete_uid}")
     if result:
@@ -123,22 +489,75 @@ if _delete_uid:
     _time_module.sleep(1.5)
     st.rerun()
 
+# ── Header ───────────────────────────────────────────────────────────
+_now_str = datetime.now().strftime("%b %d, %Y &middot; %H:%M")
+_logo_tag = f'<img src="data:image/png;base64,{_logo_b64}" class="za-logo">' if _logo_b64 else ""
+st.markdown(
+    f"""<div class="za-header">
+        {_logo_tag}
+        <div class="za-brand">
+            <div class="za-title">Zinnia Axion</div>
+            <div class="za-subtitle">Invisible Signals. Visible Performance.</div>
+        </div>
+        <div class="za-spacer"></div>
+        <div class="za-date">{_now_str}</div>
+    </div>""",
+    unsafe_allow_html=True,
+)
 
-# =====================================================================
-#  PAGE 2 — User Detail View  (when ?user_id= is present)
-# =====================================================================
-if selected_user_id:
-    # ── Back link (clean navigation, no stale DOM) ─────────────
+
+# ── Date filter ──────────────────────────────────────────────────────
+_today = _date_cls.today()
+_date_options: list[tuple[str, str]] = []
+for _offset in range(5):
+    _d = _today - timedelta(days=_offset)
+    if _offset == 0:
+        _label = f"Today — {_d.strftime('%a, %b %d')}"
+    elif _offset == 1:
+        _label = f"Yesterday — {_d.strftime('%a, %b %d')}"
+    else:
+        _label = _d.strftime("%a, %b %d")
+    _date_options.append((_label, _d.isoformat()))
+
+_date_labels = [opt[0] for opt in _date_options]
+_date_values = [opt[1] for opt in _date_options]
+
+_fc1, _fc2 = st.columns([3, 1])
+with _fc2:
+    _sel_idx = st.selectbox(
+        "Filter Date",
+        range(len(_date_labels)),
+        format_func=lambda i: _date_labels[i],
+        index=0,
+        key="date_filter",
+    )
+_selected_date: str = _date_values[_sel_idx]
+_is_today = _sel_idx == 0
+_date_param: dict = {} if _is_today else {"date": _selected_date}
+
+if not _is_today:
+    _viewing = _date_options[_sel_idx][0]
     st.markdown(
-        '<a href="?" target="_self" style="font-size:1rem;">&larr; Back to Leaderboard</a>',
+        f'<div style="font-size:0.78rem;color:#64748b;margin:-12px 0 16px 0;">'
+        f'Showing data for: <strong>{_viewing}</strong></div>',
         unsafe_allow_html=True,
     )
 
-    st.header(f"User Detail — {selected_user_id}")
+# =====================================================================
+#  PAGE 2 — User Detail
+# =====================================================================
+if selected_user_id:
+    st.markdown(
+        '<a href="?" target="_self" class="za-back">&larr; Back to Leaderboard</a>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        f'<div class="za-detail-title">User Detail &mdash; {selected_user_id}</div>',
+        unsafe_allow_html=True,
+    )
 
-    # ── Fetch user data ─────────────────────────────────────────
-    summary = _get("/summary/today", {"user_id": selected_user_id})
-    np_apps = _get(f"/admin/user/{selected_user_id}/non-productive-apps")
+    summary = _get("/summary/today", {"user_id": selected_user_id, **_date_param})
+    app_breakdown = _get(f"/admin/user/{selected_user_id}/app-breakdown", _date_param or None)
     daily_data = _get("/daily", {"days": 7, "user_id": selected_user_id})
 
     _has_today = summary and summary.get("total_seconds", 0) > 0
@@ -150,42 +569,76 @@ if selected_user_id:
         prod_pct = round(productive / total * 100, 1) if total else 0
         non_prod_pct = round(non_productive / total * 100, 1) if total else 0
 
-        # ── ROW 1 — Summary metrics ─────────────────────────────────
-        m1, m2, m3, m4 = st.columns(4)
-        m1.metric("Non-Productive %", f"{non_prod_pct}%")
-        m2.metric("Productive %", f"{prod_pct}%")
-        m3.metric("Non-Productive Time", _fmt(non_productive))
-        m4.metric("Total Tracked", _fmt(total))
+        st.markdown(f"""
+        <div class="za-metrics">
+            <div class="za-card card-green">
+                <div class="za-card-label">Productive</div>
+                <div class="za-card-value green">{prod_pct}%</div>
+            </div>
+            <div class="za-card card-red">
+                <div class="za-card-label">Non-Productive</div>
+                <div class="za-card-value red">{non_prod_pct}%</div>
+            </div>
+            <div class="za-card card-green">
+                <div class="za-card-label">Productive Time</div>
+                <div class="za-card-value green">{_fmt(productive)}</div>
+            </div>
+            <div class="za-card card-neutral">
+                <div class="za-card-label">Total Tracked</div>
+                <div class="za-card-value">{_fmt(total)}</div>
+            </div>
+        </div>""", unsafe_allow_html=True)
 
-        # ── ROW 2 — Non-productive app breakdown ────────────────────
-        st.caption(f"Non-Productive Apps — {selected_user_id} (Today)")
+        st.markdown(
+            f'<div class="za-section">Apps Breakdown &mdash; {selected_user_id} ({_date_labels[_sel_idx].split(" — ")[0]})</div>',
+            unsafe_allow_html=True,
+        )
 
-        if np_apps and len(np_apps) > 0:
-            df_np = pd.DataFrame(np_apps)
-            df_np["Duration"] = df_np["seconds"].apply(_fmt)
-            df_np = df_np.sort_values("seconds", ascending=True)
-
-            fig_np = px.bar(
-                df_np, y="app_name", x="seconds", orientation="h",
-                text="Duration",
-                color_discrete_sequence=["#ef4444"],
-            )
-            fig_np.update_traces(textposition="outside")
-            fig_np.update_layout(
-                yaxis={"title": "", "automargin": True},
-                xaxis_title="seconds",
-                margin=dict(t=5, b=5, l=10, r=5),
-                height=max(180, len(df_np) * 30 + 60),
-                showlegend=False,
-            )
-            st.plotly_chart(fig_np, use_container_width=True)
+        if app_breakdown and len(app_breakdown) > 0:
+            rows = []
+            for entry in app_breakdown:
+                name = entry["app_name"]
+                p_sec = entry.get("productive", 0)
+                np_sec = entry.get("non_productive", 0)
+                if p_sec > 0:
+                    rows.append({"App": name, "Seconds": p_sec, "Type": "Productive", "Duration": _fmt(p_sec)})
+                if np_sec > 0:
+                    rows.append({"App": name, "Seconds": np_sec, "Type": "Non-Productive", "Duration": _fmt(np_sec)})
+            if rows:
+                df_apps = pd.DataFrame(rows)
+                app_order = [e["app_name"] for e in sorted(app_breakdown, key=lambda x: x["total"])]
+                df_apps["App"] = pd.Categorical(df_apps["App"], categories=app_order, ordered=True)
+                fig_apps = px.bar(
+                    df_apps, y="App", x="Seconds", color="Type", orientation="h",
+                    text="Duration",
+                    color_discrete_map={"Productive": "#059669", "Non-Productive": "#dc2626"},
+                    category_orders={"Type": ["Productive", "Non-Productive"]},
+                )
+                fig_apps.update_traces(textposition="outside", textfont_size=11)
+                fig_apps.update_layout(
+                    barmode="group",
+                    yaxis={"title": "", "automargin": True},
+                    xaxis_title="",
+                    margin=dict(t=5, b=5, l=10, r=50),
+                    height=max(220, len(app_breakdown) * 52 + 60),
+                    legend=dict(
+                        orientation="h", yanchor="bottom", y=1.02,
+                        xanchor="right", x=1, title_text="",
+                    ),
+                    **_CHART_LAYOUT,
+                )
+                st.plotly_chart(fig_apps, use_container_width=True)
+            else:
+                st.info("No app usage data available.")
         else:
-            st.success(f"{selected_user_id} has no non-productive app usage today.")
+            st.info(f"No app breakdown data for {selected_user_id} today.")
     else:
         st.info(f"No data for {selected_user_id} today.")
 
-    # ── ROW 3 — 7-day daily trend line graph ────────────────────
-    st.caption(f"7-Day Trend — {selected_user_id}")
+    st.markdown(
+        f'<div class="za-section">7-Day Trend &mdash; {selected_user_id}</div>',
+        unsafe_allow_html=True,
+    )
 
     if daily_data and isinstance(daily_data, list) and len(daily_data) > 0:
         line_rows = []
@@ -203,120 +656,117 @@ if selected_user_id:
             xaxis_title="", yaxis_title="min",
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
                         title_text=""),
-            margin=dict(t=5, b=5, l=5, r=5), height=280,
+            margin=dict(t=5, b=5, l=5, r=5), height=300,
+            **_CHART_LAYOUT,
         )
         st.plotly_chart(fig_line, use_container_width=True)
     else:
         st.info("No daily trend data available.")
 
-    # ── Footer ──────────────────────────────────────────────────
-    st.caption("Admin view — data refreshes automatically.")
-
+    st.markdown(
+        '<div class="za-footer"><span>Admin view</span><span>Zinnia Axion v1.0</span></div>',
+        unsafe_allow_html=True,
+    )
     if auto_refresh:
         _time_module.sleep(10)
         st.rerun()
-
     st.stop()
 
 
 # =====================================================================
-#  PAGE 1 — Leaderboard View  (default, no ?user_id=)
+#  PAGE 1 — Leaderboard
 # =====================================================================
-st.header("Zinnia Axion — Admin Leaderboard")
 
-# ── Fetch leaderboard ───────────────────────────────────────────────
-leaderboard = _get("/admin/leaderboard")
+leaderboard = _get("/admin/leaderboard", _date_param or None)
+tracker_status = _get("/admin/tracker-status") or []
+_status_map: dict[str, dict] = {s["user_id"]: s for s in tracker_status}
 
 if not leaderboard or len(leaderboard) == 0:
-    st.info("No user data for today yet. Ensure trackers are running.")
+    _no_data_msg = "No activity recorded for this date." if not _is_today else "No user data for today yet. Ensure trackers are running."
+    st.info(_no_data_msg)
     st.stop()
 
-# ── ROW 1 — Summary metrics ────────────────────────────────────────
+# ── Metric cards ─────────────────────────────────────────────────────
 total_users = len(leaderboard)
 avg_prod = sum(r["productive_pct"] for r in leaderboard) / total_users if total_users else 0
 avg_non_prod = sum(r["non_productive_pct"] for r in leaderboard) / total_users if total_users else 0
 total_tracked = sum(r["total_sec"] for r in leaderboard)
 
-m1, m2, m3, m4 = st.columns(4)
-m1.metric("Total Users", total_users)
-m2.metric("Avg Productive", f"{avg_prod:.1f}%")
-m3.metric("Avg Non-Productive", f"{avg_non_prod:.1f}%")
-m4.metric("Total Tracked", _fmt(total_tracked))
+_prod_cls = "card-green"
+_prod_val = "green"
+_np_cls = "card-red" if avg_non_prod >= 50 else ("card-amber" if avg_non_prod >= 40 else "card-green")
+_np_val = "red" if avg_non_prod >= 50 else ("amber" if avg_non_prod >= 40 else "green")
 
-# ═══════════════════════════════════════════════════════════════════
-#  AI SUMMARY — Team Productivity Insights (above leaderboard)
-# ═══════════════════════════════════════════════════════════════════
+st.markdown(f"""
+<div class="za-metrics">
+    <div class="za-card card-neutral">
+        <div class="za-card-label">Team Size</div>
+        <div class="za-card-value">{total_users}</div>
+    </div>
+    <div class="za-card {_prod_cls}">
+        <div class="za-card-label">Avg Productive</div>
+        <div class="za-card-value {_prod_val}">{avg_prod:.1f}%</div>
+    </div>
+    <div class="za-card {_np_cls}">
+        <div class="za-card-label">Avg Non-Productive</div>
+        <div class="za-card-value {_np_val}">{avg_non_prod:.1f}%</div>
+    </div>
+    <div class="za-card card-neutral">
+        <div class="za-card-label">Total Tracked</div>
+        <div class="za-card-value">{_fmt(total_tracked)}</div>
+    </div>
+</div>""", unsafe_allow_html=True)
 
-_ai_enabled = st.sidebar.checkbox(
-    "AI Summary",
-    value=bool(OPENAI_API_KEY),
-    help="Enable AI-generated team insights (requires OPENAI_API_KEY in .env)",
+# ── Summary dialog ───────────────────────────────────────────────────
+@st.dialog("Daily Ops Snapshot", width="large")
+def _show_summary_dialog():
+    st.session_state["_summary_open"] = True
+    force = st.button("🔄 Regenerate", key="regen_summary")
+    with st.spinner("Generating summary..."):
+        text, is_ai = get_executive_summary(leaderboard, force_refresh=force)
+    st.markdown(text)
+    st.divider()
+    col_ts, col_badge = st.columns([3, 1])
+    with col_ts:
+        st.caption(f"Generated at {datetime.now().strftime('%H:%M:%S')}")
+    with col_badge:
+        if is_ai:
+            st.caption("Powered by OpenAI")
+        else:
+            st.caption("Heuristic summary" + (" (no API key)" if not OPENAI_API_KEY else ""))
+
+if st.button("📋  View Summary", type="primary"):
+    _show_summary_dialog()
+else:
+    st.session_state["_summary_open"] = False
+
+# ── Leaderboard ──────────────────────────────────────────────────────
+st.markdown(
+    '<div class="za-section">Leaderboard &mdash; ranked by non-productive % (highest first)</div>',
+    unsafe_allow_html=True,
 )
 
-if _ai_enabled and len(leaderboard) >= 1:
-    import ai_summary as _ai_mod
 
-    if st.session_state.get("_regen_ai"):
-        _ai_mod._cached_at = 0
-        st.session_state["_regen_ai"] = False
-
-    with st.container():
-        st.subheader("AI Summary: Team Productivity Insights")
-        with st.spinner("Generating summary..."):
-            _summary_text, _is_ai = get_summary(leaderboard)
-        st.markdown(_summary_text)
-
-        _col_ts, _col_btn, _col_badge = st.columns([3, 1, 1])
-        with _col_ts:
-            st.caption(f"Last updated at {datetime.now().strftime('%H:%M:%S')}")
-        with _col_btn:
-            if st.button("Regenerate", key="regen_ai"):
-                _ai_mod._cached_at = 0
-                st.session_state["_regen_ai"] = True
-                st.rerun()
-        with _col_badge:
-            if _is_ai:
-                st.caption("Powered by OpenAI")
-            else:
-                st.caption("Heuristic summary (no API key)")
-        st.divider()
-
-# ═══════════════════════════════════════════════════════════════════
-#  ROW 2 — Leaderboard table (sorted: highest non-productive first)
-# ═══════════════════════════════════════════════════════════════════
-st.caption("Users ranked by non-productive percentage (highest first)")
-
-def _row_bg(np_pct: float) -> tuple[str, str]:
-    """Return (background-color, text-color) based on non-productive %."""
+def _row_bg(np_pct: float) -> str:
+    """Light-mode row tinting based on non-productive %."""
     if np_pct >= 50:
         t = min((np_pct - 50) / 50, 1.0)
-        intensity = 0.3 + 0.7 * t
-        r = int(255 - 75 * intensity)
-        g = int(220 - 180 * intensity)
-        b = int(220 - 180 * intensity)
-        text = "#991b1b" if intensity < 0.6 else "#ffffff"
-        return f"rgb({r},{g},{b})", text
-
+        intensity = 0.04 + 0.08 * t
+        return f"rgba(239,68,68,{intensity:.2f})"
     prod_pct = 100 - np_pct
     if prod_pct >= 70:
         t = min((prod_pct - 70) / 30, 1.0)
-        intensity = 0.25 + 0.75 * t
-        r = int(220 - 190 * intensity)
-        g = int(255 - 115 * intensity)
-        b = int(220 - 170 * intensity)
-        text = "#166534" if intensity < 0.7 else "#ffffff"
-        return f"rgb({r},{g},{b})", text
-
-    return "transparent", "inherit"
+        intensity = 0.03 + 0.06 * t
+        return f"rgba(34,197,94,{intensity:.2f})"
+    return "transparent"
 
 
-# Build HTML table with View links and gradient rows
 _header = (
     "<tr>"
-    "<th>User</th>"
-    "<th>Non-Productive %</th><th>Productive %</th>"
-    "<th>Non-Productive Time</th><th>Productive Time</th>"
-    "<th>Total Time</th><th>Actions</th>"
+    "<th>User</th><th>Status</th>"
+    "<th>Non-Productive</th><th>Productive</th>"
+    "<th>NP Time</th><th>P Time</th>"
+    "<th>Total</th><th style='text-align:right;'>Actions</th>"
     "</tr>"
 )
 
@@ -325,47 +775,52 @@ for entry in leaderboard:
     uid = entry["user_id"]
     np_pct = entry["non_productive_pct"]
     p_pct = entry["productive_pct"]
-    bg, tc = _row_bg(np_pct)
+    bg = _row_bg(np_pct)
+
+    _st = _status_map.get(uid, {})
+    _is_online = _st.get("status") == "online"
+    _ago = _st.get("seconds_ago", -1)
+    if _is_online:
+        _status = '<span class="status-badge"><span class="dot dot-online"></span>Online</span>'
+    elif _ago >= 0:
+        _mins = _ago // 60
+        _label = f"{_mins}m ago" if _mins > 0 else f"{_ago}s ago"
+        _status = f'<span class="status-badge"><span class="dot dot-offline"></span>{_label}</span>'
+    else:
+        _status = '<span class="status-badge"><span class="dot dot-unknown"></span>&mdash;</span>'
+
     _rows_html += (
-        f'<tr style="background-color:{bg}; color:{tc}">'
-        f"<td><b>{uid}</b></td>"
-        f"<td>{np_pct:.1f}%</td><td>{p_pct:.1f}%</td>"
+        f'<tr style="background:{bg};">'
+        f'<td class="user-name">{uid}</td>'
+        f"<td>{_status}</td>"
+        f"<td>{_pct_badge(np_pct, invert=True)}</td>"
+        f"<td>{_pct_badge(p_pct, invert=False)}</td>"
         f"<td>{_fmt(entry['non_productive_sec'])}</td>"
         f"<td>{_fmt(entry['productive_sec'])}</td>"
         f"<td>{_fmt(entry['total_sec'])}</td>"
-        f'<td style="white-space:nowrap;">'
-        f'<a href="?user_id={uid}" target="_self"'
-        f' style="color:{tc}; font-weight:bold; text-decoration:underline;">'
-        f"View</a>"
-        f' &nbsp;|&nbsp; '
-        f'<a href="?delete_user={uid}" target="_self"'
-        f' style="color:#FFFFFF; font-weight:bold; text-decoration:underline;"'
-        f' onclick="return confirm(\'Delete all data for {uid}?\');">'
-        f"Delete</a>"
-        f"</td>"
-        f"</tr>"
+        f'<td style="white-space:nowrap; text-align:right;">'
+        f'<a href="?user_id={uid}" target="_self" class="action-link action-view">View</a> '
+        f'<a href="?delete_user={uid}" target="_self" class="action-link action-delete"'
+        f' onclick="return confirm(\'Delete all data for {uid}?\');">Delete</a>'
+        f"</td></tr>"
     )
 
-_table_html = f"""
-<style>
-.leader-table {{ width:100%; border-collapse:collapse; font-size:0.92rem; }}
-.leader-table th {{ text-align:left; padding:10px 12px; border-bottom:2px solid #444;
-                     font-weight:600; }}
-.leader-table td {{ padding:10px 12px; border-bottom:1px solid #333; }}
-.leader-table tr:hover {{ opacity:0.9; }}
-</style>
-<table class="leader-table">
-<thead>{_header}</thead>
-<tbody>{_rows_html}</tbody>
-</table>
-"""
+st.markdown(
+    f'<div class="za-table-wrap"><table class="leader-table">'
+    f'<thead>{_header}</thead><tbody>{_rows_html}</tbody></table></div>',
+    unsafe_allow_html=True,
+)
 
-st.markdown(_table_html, unsafe_allow_html=True)
+# ── Footer ───────────────────────────────────────────────────────────
+st.markdown(
+    f"""<div class="za-footer">
+        <span>Auto-refresh {'enabled' if auto_refresh else 'paused'} &middot; Admin view</span>
+        <span>Zinnia Axion v1.0</span>
+    </div>""",
+    unsafe_allow_html=True,
+)
 
-# ── Footer ──────────────────────────────────────────────────────────
-st.caption("Admin view — data refreshes automatically.")
-
-# ── Auto-refresh ────────────────────────────────────────────────────
-if auto_refresh:
+# ── Auto-refresh ─────────────────────────────────────────────────────
+if auto_refresh and not st.session_state.get("_summary_open", False):
     _time_module.sleep(10)
     st.rerun()

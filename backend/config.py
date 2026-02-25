@@ -21,7 +21,7 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS: bool = False
 
     # ── Productivity thresholds ─────────────────────────────────
-    BUCKET_SIZE_SEC: int = int(os.getenv("BUCKET_SIZE_SEC", "60"))
+    BUCKET_SIZE_SEC: int = int(os.getenv("BUCKET_SIZE_SEC", "10"))
 
     # Combined interaction threshold (keystrokes + clicks)
     PRODUCTIVE_INTERACTION_THRESHOLD: int = int(

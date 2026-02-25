@@ -13,6 +13,7 @@ GET  /dashboard/<user_id>                — self-contained HTML dashboard for a
 GET  /health                             — simple health check
 GET  /admin/leaderboard                  — all users sorted by non-productive %
 GET  /admin/user/<user_id>/non-productive-apps — non-productive apps for a user today
+GET  /admin/tracker-status                  — online/offline status of all user trackers
 """
 
 from __future__ import annotations
@@ -210,16 +211,28 @@ def _register_routes(app: Flask) -> None:
             q = q.filter(TelemetryEvent.user_id == user_id)
         return q.order_by(TelemetryEvent.timestamp.asc())
 
+    # ── helper: resolve date range from ?date= param or default to today ─
+    def _resolve_range(cfg):
+        date_str = request.args.get("date")
+        if date_str:
+            from datetime import date as _date_cls
+            try:
+                d = _date_cls.fromisoformat(date_str)
+                return _day_range(d, cfg)
+            except ValueError:
+                pass
+        return _today_range(cfg)
+
     # ── GET /summary/today ──────────────────────────────────────
     @app.route("/summary/today", methods=["GET"])
     def summary_today():
         """
-        Return productivity state totals for today.
+        Return productivity state totals for today (or ?date=YYYY-MM-DD).
         Optional query param: ?user_id=<id>
         """
         cfg = app.tracker_config  # type: ignore[attr-defined]
         user_id = request.args.get("user_id")
-        start, end = _today_range(cfg)
+        start, end = _resolve_range(cfg)
         events = _base_query(start, end, user_id).all()
         buckets = bucketize(events, cfg)
         summary = summarize_buckets(buckets)
@@ -229,12 +242,12 @@ def _register_routes(app: Flask) -> None:
     @app.route("/apps", methods=["GET"])
     def apps():
         """
-        Per-app breakdown for today.
+        Per-app breakdown for today (or ?date=YYYY-MM-DD).
         Optional query param: ?user_id=<id>
         """
         cfg = app.tracker_config  # type: ignore[attr-defined]
         user_id = request.args.get("user_id")
-        start, end = _today_range(cfg)
+        start, end = _resolve_range(cfg)
         events = _base_query(start, end, user_id).all()
         buckets = bucketize(events, cfg)
         breakdown = app_breakdown(buckets, cfg)
@@ -320,8 +333,8 @@ def _register_routes(app: Flask) -> None:
     @app.route("/admin/leaderboard", methods=["GET"])
     def admin_leaderboard():
         """
-        Return all users with their productivity stats for today,
-        sorted by non-productive percentage descending (worst offenders first).
+        Return all users with their productivity stats for today
+        (or ?date=YYYY-MM-DD), sorted by non-productive % descending.
 
         Response: [
           { user_id, productive_sec, non_productive_sec,
@@ -329,7 +342,7 @@ def _register_routes(app: Flask) -> None:
         ]
         """
         cfg = app.tracker_config  # type: ignore[attr-defined]
-        start, end = _today_range(cfg)
+        start, end = _resolve_range(cfg)
 
         # Fetch all today's events
         all_events = (
@@ -369,13 +382,14 @@ def _register_routes(app: Flask) -> None:
     @app.route("/admin/user/<user_id>/non-productive-apps", methods=["GET"])
     def admin_user_non_productive_apps(user_id: str):
         """
-        Return non-productive app breakdown for a specific user today.
+        Return non-productive app breakdown for a specific user
+        for today (or ?date=YYYY-MM-DD).
 
         Response: [ { app_name, seconds }, ... ]
         sorted by seconds descending.
         """
         cfg = app.tracker_config  # type: ignore[attr-defined]
-        start, end = _today_range(cfg)
+        start, end = _resolve_range(cfg)
         events = _base_query(start, end, user_id).all()
         buckets = bucketize(events, cfg)
         breakdown = app_breakdown(buckets, cfg)
@@ -393,6 +407,39 @@ def _register_routes(app: Flask) -> None:
         np_apps.sort(key=lambda r: r["seconds"], reverse=True)
         return jsonify(np_apps), 200
 
+    # ── GET /admin/user/<user_id>/app-breakdown ────────────────
+    @app.route("/admin/user/<user_id>/app-breakdown", methods=["GET"])
+    def admin_user_app_breakdown(user_id: str):
+        """
+        Full per-app breakdown with productive and non-productive seconds
+        for today (or ?date=YYYY-MM-DD).
+
+        Response: [ { app_name, productive, non_productive, total, category }, ... ]
+        sorted by total seconds descending.
+        """
+        cfg = app.tracker_config  # type: ignore[attr-defined]
+        start, end = _resolve_range(cfg)
+        events = _base_query(start, end, user_id).all()
+        buckets = bucketize(events, cfg)
+        breakdown = app_breakdown(buckets, cfg)
+
+        result = []
+        for entry in breakdown:
+            states = entry.get("states", {})
+            p = states.get("productive", 0)
+            np = states.get("non_productive", 0)
+            total = p + np
+            if total > 0:
+                result.append({
+                    "app_name": entry["app_name"],
+                    "productive": p,
+                    "non_productive": np,
+                    "total": total,
+                    "category": entry.get("category", "non_productive"),
+                })
+        result.sort(key=lambda r: r["total"], reverse=True)
+        return jsonify(result), 200
+
     # ── DELETE /admin/user/<user_id> ────────────────────────────
     @app.route("/admin/user/<user_id>", methods=["DELETE"])
     def admin_delete_user(user_id: str):
@@ -401,6 +448,51 @@ def _register_routes(app: Flask) -> None:
         db.session.commit()
         logger.info("Deleted %d events for user %r.", count, user_id)
         return jsonify({"deleted": count, "user_id": user_id}), 200
+
+    # ── GET /admin/tracker-status ────────────────────────────────
+    @app.route("/admin/tracker-status", methods=["GET"])
+    def admin_tracker_status():
+        """
+        Return online/offline status for every user that has data today.
+
+        A tracker is considered "online" if its last event is within
+        TRACKER_ONLINE_THRESHOLD seconds (default 60s — generous enough
+        to cover a batch interval + network jitter).
+
+        Response: [
+          { user_id, last_seen, seconds_ago, status: "online"|"offline" }, ...
+        ]
+        """
+        threshold = int(request.args.get("threshold", 60))
+        cfg = app.tracker_config  # type: ignore[attr-defined]
+        start, end = _today_range(cfg)
+
+        # DB stores naive local-time timestamps — compare with naive local now
+        local_tz = _get_local_tz(cfg)
+        now_naive = datetime.now(local_tz).replace(tzinfo=None)
+
+        rows_raw = (
+            db.session.query(
+                TelemetryEvent.user_id,
+                db.func.max(TelemetryEvent.timestamp).label("last_seen"),
+            )
+            .filter(TelemetryEvent.timestamp >= start, TelemetryEvent.timestamp < end)
+            .group_by(TelemetryEvent.user_id)
+            .all()
+        )
+
+        rows = []
+        for uid, last_seen in rows_raw:
+            ago = (now_naive - last_seen).total_seconds()
+            rows.append({
+                "user_id": uid,
+                "last_seen": last_seen.isoformat(),
+                "seconds_ago": round(ago),
+                "status": "online" if ago <= threshold else "offline",
+            })
+
+        rows.sort(key=lambda r: r["seconds_ago"])
+        return jsonify(rows), 200
 
     # ── GET /dashboard/<user_id> ─────────────────────────────────
     @app.route("/dashboard/<user_id>", methods=["GET"])

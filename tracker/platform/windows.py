@@ -81,6 +81,45 @@ def _get_idle_ms() -> int:
     return 0
 
 
+def _process_name_from_pid(pid: int) -> str | None:
+    """Try to get process executable name via ctypes (no psutil needed)."""
+    try:
+        PROCESS_QUERY_LIMITED = 0x1000
+        h = _kernel32.OpenProcess(PROCESS_QUERY_LIMITED, False, pid)
+        if not h:
+            return None
+        try:
+            buf = ctypes.create_unicode_buffer(260)
+            size = ctypes.wintypes.DWORD(260)
+            _kernel32.QueryFullProcessImageNameW(h, 0, buf, ctypes.byref(size))
+            path = buf.value
+            if path:
+                return path.rsplit("\\", 1)[-1].replace(".exe", "")
+        finally:
+            _kernel32.CloseHandle(h)
+    except Exception:
+        pass
+    return None
+
+
+def _app_name_from_title(title: str) -> str:
+    """Extract a likely app name from a window title.
+
+    Most Windows apps use the pattern: '<content> - <App Name>'
+    e.g.  'Budget.xlsx - Microsoft Excel'
+          'Google - Google Chrome'
+          'Inbox - Outlook'
+    """
+    if not title:
+        return "unknown"
+    for sep in (" - ", " — ", " – "):
+        if sep in title:
+            candidate = title.rsplit(sep, 1)[-1].strip()
+            if candidate and len(candidate) < 60:
+                return candidate
+    return title.strip()[:60] if title.strip() else "unknown"
+
+
 class WindowsCollector(PlatformCollector):
     """
     Windows collector with automatic VDI fallback.
@@ -136,7 +175,7 @@ class WindowsCollector(PlatformCollector):
                 proc = psutil.Process(pid)
                 app_name = proc.name().replace(".exe", "")
             except (psutil.NoSuchProcess, psutil.AccessDenied):
-                app_name = "unknown"
+                app_name = _process_name_from_pid(pid) or _app_name_from_title(window_title)
 
             if app_name.lower() == "applicationframehost":
                 app_name = self._resolve_uwp_app(hwnd, win32gui, win32process, psutil) or app_name
@@ -177,7 +216,16 @@ class WindowsCollector(PlatformCollector):
             length = _user32.GetWindowTextLengthW(hwnd)
             buf = ctypes.create_unicode_buffer(length + 1)
             _user32.GetWindowTextW(hwnd, buf, length + 1)
-            return "unknown", buf.value or ""
+            title = buf.value or ""
+
+            # Try to get process name via pid
+            pid = ctypes.wintypes.DWORD()
+            _user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+            app_name = _process_name_from_pid(pid.value) if pid.value else None
+            if not app_name:
+                app_name = _app_name_from_title(title)
+
+            return app_name, title
         except Exception:
             return "unknown", ""
 
@@ -215,7 +263,11 @@ class WindowsCollector(PlatformCollector):
                 proc = psutil.Process(pid)
                 app_name = proc.name().replace(".exe", "")
             except Exception:
-                app_name = "unknown"
+                try:
+                    _, pid = win32process.GetWindowThreadProcessId(hwnd)
+                    app_name = _process_name_from_pid(pid) or _app_name_from_title(title)
+                except Exception:
+                    app_name = _app_name_from_title(title)
 
             if app_name.lower() == "applicationframehost":
                 app_name = WindowsCollector._resolve_uwp_app(hwnd, win32gui, win32process, psutil) or app_name

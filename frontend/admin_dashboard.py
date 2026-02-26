@@ -331,18 +331,41 @@ st.markdown(
     /* ── Back link ── */
     .za-back {
         display: inline-flex; align-items: center; gap: 6px;
-        font-size: 0.85rem; color: var(--za-btn); text-decoration: none;
-        font-weight: 600; margin-bottom: 8px;
-        padding: 6px 14px; border-radius: 8px;
-        background: var(--za-back-bg); border: 1px solid var(--za-back-bdr);
+        font-size: 0.88rem; color: var(--za-btn); text-decoration: none;
+        font-weight: 700; margin-bottom: 10px;
+        padding: 8px 18px; border-radius: 8px;
+        background: var(--za-back-bg); border: 1.5px solid var(--za-back-bdr);
         transition: all 0.15s;
     }
     .za-back:hover { background: var(--za-back-hover); }
 
     /* ── Detail page heading ── */
     .za-detail-title {
-        font-size: 1.4rem; font-weight: 700; color: var(--za-text);
-        margin: 4px 0 22px 0; letter-spacing: -0.2px;
+        font-size: 1.5rem; font-weight: 800; color: var(--za-text);
+        margin: 4px 0 22px 0; letter-spacing: -0.3px;
+    }
+
+    /* ── Detail page — strong text for values ── */
+    .za-detail-title, .za-detail-section .za-card-value,
+    .za-detail-section .za-card-label,
+    .za-detail-section .za-section {
+        opacity: 1 !important;
+    }
+    .za-detail-section .za-card {
+        border-width: 1.5px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .za-detail-section .za-card-label {
+        font-size: 0.72rem; font-weight: 700;
+        color: var(--za-text-body);
+    }
+    .za-detail-section .za-card-value {
+        font-size: 2rem; font-weight: 800;
+    }
+    .za-detail-section .za-section {
+        font-size: 0.75rem; font-weight: 700;
+        color: var(--za-text-body);
+        border-bottom-width: 2px;
     }
 
     /* ── Streamlit button overrides ── */
@@ -382,6 +405,11 @@ st.markdown(
 
     /* ── Plotly chart wrapper ── */
     .stPlotlyChart > div { border-radius: 8px; }
+
+    /* ── Detail page chart labels stronger ── */
+    .za-detail-section .stPlotlyChart text {
+        fill: var(--za-text-body) !important;
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -552,7 +580,8 @@ if selected_user_id:
         unsafe_allow_html=True,
     )
     st.markdown(
-        f'<div class="za-detail-title">User Detail &mdash; {selected_user_id}</div>',
+        f'<div class="za-detail-title">User Detail &mdash; {selected_user_id}</div>'
+        f'<div class="za-detail-section">',
         unsafe_allow_html=True,
     )
 
@@ -614,16 +643,18 @@ if selected_user_id:
                     color_discrete_map={"Productive": "#059669", "Non-Productive": "#dc2626"},
                     category_orders={"Type": ["Productive", "Non-Productive"]},
                 )
-                fig_apps.update_traces(textposition="outside", textfont_size=11)
+                fig_apps.update_traces(textposition="outside", textfont_size=12, textfont_color="#0f172a")
                 fig_apps.update_layout(
                     barmode="group",
-                    yaxis={"title": "", "automargin": True},
+                    yaxis={"title": "", "automargin": True, "tickfont": {"color": "#334155", "size": 13}},
                     xaxis_title="",
+                    xaxis={"tickfont": {"color": "#334155"}},
                     margin=dict(t=5, b=5, l=10, r=50),
                     height=max(220, len(app_breakdown) * 52 + 60),
                     legend=dict(
                         orientation="h", yanchor="bottom", y=1.02,
                         xanchor="right", x=1, title_text="",
+                        font={"color": "#334155", "size": 13},
                     ),
                     **_CHART_LAYOUT,
                 )
@@ -654,14 +685,18 @@ if selected_user_id:
         )
         fig_line.update_layout(
             xaxis_title="", yaxis_title="min",
+            xaxis={"tickfont": {"color": "#334155", "size": 12}},
+            yaxis={"tickfont": {"color": "#334155", "size": 12}, "title_font": {"color": "#334155"}},
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
-                        title_text=""),
+                        title_text="", font={"color": "#334155", "size": 13}),
             margin=dict(t=5, b=5, l=5, r=5), height=300,
             **_CHART_LAYOUT,
         )
         st.plotly_chart(fig_line, use_container_width=True)
     else:
         st.info("No daily trend data available.")
+
+    st.markdown('</div>', unsafe_allow_html=True)  # close za-detail-section
 
     st.markdown(
         '<div class="za-footer"><span>Admin view</span><span>Zinnia Axion v1.0</span></div>',

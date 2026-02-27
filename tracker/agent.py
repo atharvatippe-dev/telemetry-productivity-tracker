@@ -67,7 +67,7 @@ GHOST_APPS: set[str] = {
 
 # ── Privacy: Window Title Mode ──────────────────────────────────────
 # "full" = store complete title, "redacted" = keywords only, "off" = no title
-WINDOW_TITLE_MODE: str = os.getenv("WINDOW_TITLE_MODE", "full").lower().strip()
+WINDOW_TITLE_MODE: str = os.getenv("WINDOW_TITLE_MODE", "redacted").lower().strip()
 
 # Load classification patterns for redaction mode
 # (same lists the backend uses for productivity classification)
@@ -78,6 +78,29 @@ if WINDOW_TITLE_MODE == "redacted":
         _REDACT_PATTERNS.extend(
             s.strip().lower() for s in raw.split(",") if s.strip()
         )
+
+# ── Privacy: Regex scrubbing for sensitive patterns ─────────────────
+import re
+
+_BUILTIN_SCRUB_PATTERNS: list[re.Pattern] = [
+    re.compile(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+"),   # emails
+    re.compile(r"\b\d{8,}\b"),                                          # 8+ digit numbers
+    re.compile(r"\b[A-Z]{2,4}[-]?\d{4,}\b"),                           # IDs like CA12345, TKT-2024001
+]
+
+_extra_scrub_raw = os.getenv("TITLE_SCRUB_PATTERNS", "")
+_EXTRA_SCRUB_PATTERNS: list[re.Pattern] = [
+    re.compile(p.strip()) for p in _extra_scrub_raw.split(",") if p.strip()
+]
+
+_ALL_SCRUB_PATTERNS: list[re.Pattern] = _BUILTIN_SCRUB_PATTERNS + _EXTRA_SCRUB_PATTERNS
+
+
+def _scrub_sensitive(title: str) -> str:
+    """Replace sensitive patterns (emails, long numbers, IDs) with [REDACTED]."""
+    for pat in _ALL_SCRUB_PATTERNS:
+        title = pat.sub("[REDACTED]", title)
+    return title
 
 # ── Multi-monitor / split-screen / PiP distraction detection ────────
 # Load NON_PRODUCTIVE_APPS patterns to check against visible windows
@@ -102,7 +125,7 @@ def _apply_title_mode(window_title: str) -> str:
     Apply the configured WINDOW_TITLE_MODE to a raw window title.
 
     Modes:
-      full     — return as-is (default)
+      full     — return title with sensitive patterns scrubbed
       redacted — scan for classification keywords; return only the matched
                  keyword. Strips away sensitive content like email subjects,
                  document names, URLs. If no keyword matches, return "".
@@ -117,13 +140,11 @@ def _apply_title_mode(window_title: str) -> str:
         title_lower = window_title.lower()
         for pattern in _REDACT_PATTERNS:
             if pattern in title_lower:
-                # Return only the matched keyword, not the full title
                 return pattern
-        # No classification keyword found — redact entirely
         return ""
 
-    # "full" mode — return unchanged
-    return window_title
+    # "full" mode — scrub emails, long numbers, and IDs before returning
+    return _scrub_sensitive(window_title)
 
 
 def _check_distraction(collector, active_app_name: str) -> bool:

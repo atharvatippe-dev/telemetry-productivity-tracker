@@ -55,7 +55,7 @@ def write_config(user_id: str, backend_url: str) -> None:
         "POLL_INTERVAL_SEC=1",
         "BATCH_INTERVAL_SEC=10",
         f"BUFFER_FILE={CONFIG_DIR / 'buffer.json'}",
-        "WINDOW_TITLE_MODE=full",
+        "WINDOW_TITLE_MODE=redacted",
         "WAKE_THRESHOLD_SEC=30",
         "GHOST_APPS=loginwindow,UserNotificationCenter,ScreenSaverEngine,"
         "WindowServer,SystemUIServer,Dock,Finder,LockScreen,logind",
@@ -63,8 +63,8 @@ def write_config(user_id: str, backend_url: str) -> None:
         "instagram,facebook,tiktok,twitch,discord,spotify,steam,epic games",
         "MEETING_APPS=zoom,microsoft teams,google meet,webex,facetime,"
         "slack huddle,discord call,skype,around,tuple,gather",
-        "BROWSER_APPS=safari,google chrome,firefox,microsoft edge,msedge,"
-        "brave browser,arc,chromium",
+        "BROWSER_APPS=safari,google chrome,chrome,firefox,microsoft edge,msedge,"
+        "brave browser,brave,arc,chromium,opera",
     ]
     CONFIG_FILE.write_text("\n".join(lines) + "\n")
 

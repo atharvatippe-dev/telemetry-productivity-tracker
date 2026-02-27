@@ -20,26 +20,30 @@ class Config:
     SQLALCHEMY_DATABASE_URI: str = os.getenv("DATABASE_URI", "sqlite:///telemetry.db")
     SQLALCHEMY_TRACK_MODIFICATIONS: bool = False
 
-    # ── Productivity thresholds ─────────────────────────────────
+    # ── Productivity thresholds (tuned for 10-second buckets) ───
     BUCKET_SIZE_SEC: int = int(os.getenv("BUCKET_SIZE_SEC", "10"))
 
     # Combined interaction threshold (keystrokes + clicks)
+    # Scaled from 10 (at 60s) → 2 (at 10s)
     PRODUCTIVE_INTERACTION_THRESHOLD: int = int(
-        os.getenv("PRODUCTIVE_INTERACTION_THRESHOLD", "10")
+        os.getenv("PRODUCTIVE_INTERACTION_THRESHOLD", "2")
     )
     # Keystroke-only threshold (if user is mostly typing)
+    # Scaled from 5 (at 60s) → 1 (at 10s)
     PRODUCTIVE_KEYSTROKE_THRESHOLD: int = int(
-        os.getenv("PRODUCTIVE_KEYSTROKE_THRESHOLD", "5")
+        os.getenv("PRODUCTIVE_KEYSTROKE_THRESHOLD", "1")
     )
     # Mouse-only threshold (if user is mostly clicking — design tools, etc.)
+    # Scaled from 3 (at 60s) → 1 (at 10s)
     PRODUCTIVE_MOUSE_THRESHOLD: int = int(
-        os.getenv("PRODUCTIVE_MOUSE_THRESHOLD", "3")
+        os.getenv("PRODUCTIVE_MOUSE_THRESHOLD", "1")
     )
 
-    # ── Reading / Active Presence detection ──────────────────────
+    # ── Reading / Active Presence detection (tuned for 10s buckets) ──
     # Minimum mouse movement (pixels) to infer physical presence (reading/scrolling)
+    # Scaled from 50px (at 60s) → 8px (at 10s)
     MOUSE_MOVEMENT_THRESHOLD: float = float(
-        os.getenv("MOUSE_MOVEMENT_THRESHOLD", "50")
+        os.getenv("MOUSE_MOVEMENT_THRESHOLD", "8")
     )
     # OS idle seconds beyond which the user is assumed away from the computer
     IDLE_AWAY_THRESHOLD: float = float(
@@ -47,18 +51,20 @@ class Config:
     )
     # Anti-wiggle: minimum 1-second samples with mouse movement in a bucket
     # to count as sustained presence (real reading vs occasional nudge)
+    # Scaled from 15 (at 60s) → 3 (at 10s)
     MOUSE_MOVEMENT_MIN_SAMPLES: int = int(
-        os.getenv("MOUSE_MOVEMENT_MIN_SAMPLES", "15")
+        os.getenv("MOUSE_MOVEMENT_MIN_SAMPLES", "3")
     )
 
-    # ── Anti-cheat: Interaction variance ────────────────────────
+    # ── Anti-cheat: Interaction variance (tuned for 10s buckets) ──
     # Minimum fraction of samples with zero interaction (natural pauses)
     MIN_ZERO_SAMPLE_RATIO: float = float(
         os.getenv("MIN_ZERO_SAMPLE_RATIO", "0.25")
     )
     # Minimum distinct per-sample interaction values (real typing = many, bot = 1-2)
+    # Reduced from 3 to 2 for 10s buckets (fewer samples = fewer possible distinct values)
     MIN_DISTINCT_VALUES: int = int(
-        os.getenv("MIN_DISTINCT_VALUES", "3")
+        os.getenv("MIN_DISTINCT_VALUES", "2")
     )
 
     # ── Multi-monitor / Split-screen / PiP distraction ─────────
@@ -75,7 +81,7 @@ class Config:
         s.strip().lower()
         for s in os.getenv(
             "MEETING_APPS",
-            "zoom,microsoft teams,google meet,webex,facetime,slack huddle",
+            "zoom,microsoft teams,google meet,webex,facetime,slack huddle,discord call,skype,around,tuple,gather",
         ).split(",")
         if s.strip()
     ]
@@ -96,7 +102,7 @@ class Config:
         s.strip().lower()
         for s in os.getenv(
             "BROWSER_APPS",
-            "safari,google chrome,firefox,microsoft edge,brave browser,arc",
+            "safari,google chrome,chrome,firefox,microsoft edge,msedge,brave browser,brave,arc,chromium,opera",
         ).split(",")
         if s.strip()
     ]
@@ -107,7 +113,32 @@ class Config:
         s.strip().lower()
         for s in os.getenv(
             "NON_PRODUCTIVE_APPS",
-            "youtube,netflix,reddit,twitter,instagram,facebook,tiktok",
+            "youtube,netflix,reddit,twitter,x.com,instagram,facebook,tiktok,twitch,discord,spotify,steam,epic games",
         ).split(",")
         if s.strip()
     ]
+
+    # ── Data Minimization ──────────────────────────────────────
+    # Server-side enforcement: discard all window titles before storage
+    # Even if a tracker sends titles, the backend replaces them with ""
+    DROP_TITLES: bool = os.getenv("DROP_TITLES", "false").lower() in ("true", "1", "yes")
+
+    # ── Rate Limiting & Input Validation ────────────────────────
+    # Max request body size in kilobytes (rejects with HTTP 413 if exceeded)
+    MAX_REQUEST_SIZE_KB: int = int(os.getenv("MAX_REQUEST_SIZE_KB", "512"))
+
+    # Per-device (or per-IP in demo mode) rate limit for POST /track
+    # Format: "<count>/minute" — requests beyond this get HTTP 429
+    RATE_LIMIT_PER_DEVICE: str = os.getenv("RATE_LIMIT_PER_DEVICE", "120/minute")
+
+    # ── Enterprise Hardening ─────────────────────────────────────
+    # Master toggle: True = relaxed (no auth, open dashboards)
+    #                False = enforce device auth, RBAC, rate limits, etc.
+    DEMO_MODE: bool = os.getenv("DEMO_MODE", "true").lower() in ("true", "1", "yes")
+
+    # Flask session signing key (required in production)
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "")
+
+    # Admin credentials (required in production)
+    ADMIN_USERNAME: str = os.getenv("ADMIN_USERNAME", "admin")
+    ADMIN_PASSWORD: str = os.getenv("ADMIN_PASSWORD", "")

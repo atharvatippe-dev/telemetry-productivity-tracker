@@ -1,13 +1,61 @@
 """
-SQLAlchemy models for telemetry storage.
+SQLAlchemy models for telemetry storage and audit logging.
 
 TelemetryEvent — one raw sample sent by the tracker agent.
+AuditLog       — tamper-evident record of security-relevant actions.
 """
 
 from datetime import datetime, timezone
 from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
+
+
+class AuditLog(db.Model):
+    """
+    Immutable record of a security-relevant action.
+
+    Fields
+    ------
+    id          : auto-increment PK
+    timestamp   : UTC datetime when the action occurred
+    actor       : who performed it — admin username, device_id, or "system"
+    action      : what happened — e.g. "delete_user", "login_failed", "retention_cleanup"
+    target_user : which user was affected (if applicable)
+    ip_address  : requester's IP address
+    user_agent  : requester's browser or agent string
+    detail      : optional extra context (e.g. reason for failure)
+    """
+
+    __tablename__ = "audit_log"
+
+    id: int = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    timestamp: datetime = db.Column(
+        db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc), index=True
+    )
+    actor: str = db.Column(db.String(256), nullable=False, default="unknown")
+    action: str = db.Column(db.String(128), nullable=False, index=True)
+    target_user: str = db.Column(db.String(128), nullable=True)
+    ip_address: str = db.Column(db.String(64), nullable=True)
+    user_agent: str = db.Column(db.String(512), nullable=True)
+    detail: str = db.Column(db.String(1024), nullable=True)
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "timestamp": self.timestamp.isoformat(),
+            "actor": self.actor,
+            "action": self.action,
+            "target_user": self.target_user,
+            "ip_address": self.ip_address,
+            "detail": self.detail,
+        }
+
+    def __repr__(self) -> str:
+        return (
+            f"<AuditLog id={self.id} action={self.action!r} "
+            f"actor={self.actor!r} target={self.target_user!r}>"
+        )
 
 
 class TelemetryEvent(db.Model):

@@ -24,10 +24,13 @@ from zoneinfo import ZoneInfo
 
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 from backend.config import Config
 from backend.models import db, TelemetryEvent
 from backend.productivity import bucketize, summarize_buckets, app_breakdown, STATES
+from backend.audit import log_action
 
 # ── Logging ─────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -37,6 +40,46 @@ logging.basicConfig(
 logger = logging.getLogger("backend")
 
 
+def _check_production_config(config: Config) -> None:
+    """Verify critical security settings when running in production mode.
+
+    Raises SystemExit with a clear message if any required setting is missing.
+    Called only when DEMO_MODE=false.
+    """
+    errors: list[str] = []
+
+    if not config.SECRET_KEY:
+        errors.append(
+            "SECRET_KEY is not set. Flask needs it to sign session cookies securely. "
+            "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
+        )
+
+    if not config.ADMIN_PASSWORD:
+        errors.append(
+            "ADMIN_PASSWORD is not set. A password is required for admin dashboard access "
+            "in production mode."
+        )
+
+    uri = config.SQLALCHEMY_DATABASE_URI
+    if uri.startswith("sqlite"):
+        errors.append(
+            f"DATABASE_URI is set to SQLite ({uri}). "
+            "Production deployments should use PostgreSQL for reliability and concurrency."
+        )
+
+    if errors:
+        logger.error("=" * 70)
+        logger.error("PRODUCTION MODE STARTUP FAILED — missing required configuration:")
+        logger.error("")
+        for i, err in enumerate(errors, 1):
+            logger.error("  %d. %s", i, err)
+        logger.error("")
+        logger.error("Fix these in your .env file, then restart.")
+        logger.error("Or set DEMO_MODE=true to run without security enforcement.")
+        logger.error("=" * 70)
+        raise SystemExit(1)
+
+
 def create_app(config: Config | None = None) -> Flask:
     """Application factory."""
     app = Flask(__name__)
@@ -44,13 +87,44 @@ def create_app(config: Config | None = None) -> Flask:
     if config is None:
         config = Config()
 
+    # ── Demo / Production mode gate ─────────────────────────────
+    if config.DEMO_MODE:
+        logger.warning("=" * 70)
+        logger.warning(
+            "DEMO MODE ACTIVE — authentication and access control are DISABLED."
+        )
+        logger.warning(
+            "Set DEMO_MODE=false in .env before deploying to production."
+        )
+        logger.warning("=" * 70)
+    else:
+        _check_production_config(config)
+        app.secret_key = config.SECRET_KEY
+        logger.info("Production mode enabled — all security features enforced.")
+
     app.config.from_object(config)
     # Store config for easy access in routes
     app.tracker_config = config  # type: ignore[attr-defined]
 
+    # ── Task 6.1: Request size limit ────────────────────────────
+    app.config["MAX_CONTENT_LENGTH"] = config.MAX_REQUEST_SIZE_KB * 1024
+
     # ── Extensions ──────────────────────────────────────────────
     CORS(app)
     db.init_app(app)
+
+    # ── Task 6.3: Per-device rate limiting ──────────────────────
+    def _rate_limit_key():
+        """Use X-Device-Id header if present, otherwise fall back to IP."""
+        return request.headers.get("X-Device-Id", get_remote_address())
+
+    limiter = Limiter(
+        key_func=_rate_limit_key,
+        app=app,
+        default_limits=[],
+        storage_uri="memory://",
+    )
+    app.limiter = limiter  # type: ignore[attr-defined]
 
     with app.app_context():
         db.create_all()
@@ -107,6 +181,8 @@ def _run_cleanup(config: Config) -> int:
             "Cleanup: deleted %d events older than %d days (before %s).",
             count, retention, cutoff.isoformat(),
         )
+        log_action("system", "retention_cleanup",
+                   detail=f"Deleted {count} events older than {retention}d")
     else:
         logger.info("Cleanup: no events older than %d days to delete.", retention)
 
@@ -147,11 +223,50 @@ def _day_range(date_obj, config: Config) -> tuple[datetime, datetime]:
     return start_local.astimezone(timezone.utc), end_local.astimezone(timezone.utc)
 
 
+def _validate_event(raw: dict) -> str | None:
+    """Validate a single telemetry event dict.
+
+    Returns an error message string if invalid, or None if valid.
+    """
+    if not isinstance(raw, dict):
+        return "event must be a JSON object"
+
+    ts = raw.get("timestamp")
+    if ts is not None and not isinstance(ts, str):
+        return f"timestamp must be an ISO 8601 string, got {type(ts).__name__}"
+
+    app_name = raw.get("app_name")
+    if app_name is not None and not isinstance(app_name, str):
+        return f"app_name must be a string, got {type(app_name).__name__}"
+
+    for int_field in ("keystroke_count", "mouse_clicks"):
+        val = raw.get(int_field)
+        if val is not None:
+            if not isinstance(val, (int, float)):
+                return f"{int_field} must be a number, got {type(val).__name__}"
+            if val < 0:
+                return f"{int_field} must be >= 0, got {val}"
+
+    for num_field in ("mouse_distance", "idle_seconds"):
+        val = raw.get(num_field)
+        if val is not None:
+            if not isinstance(val, (int, float)):
+                return f"{num_field} must be a number, got {type(val).__name__}"
+            if val < 0:
+                return f"{num_field} must be >= 0, got {val}"
+
+    return None
+
+
 def _register_routes(app: Flask) -> None:
     """Register all API routes on the app."""
 
+    limiter: Limiter = app.limiter  # type: ignore[attr-defined]
+    cfg: Config = app.tracker_config  # type: ignore[attr-defined]
+
     # ── POST /track ─────────────────────────────────────────────
     @app.route("/track", methods=["POST"])
+    @limiter.limit(cfg.RATE_LIMIT_PER_DEVICE)
     def track():
         """
         Ingest a batch of telemetry events.
@@ -161,7 +276,8 @@ def _register_routes(app: Flask) -> None:
                           keystroke_count, mouse_clicks,
                           mouse_distance, idle_seconds }, ... ] }
 
-        Returns 201 on success.
+        Returns 201 on success, 400 on validation failure,
+        413 if payload too large, 429 if rate-limited.
         """
         data = request.get_json(silent=True)
         if not data or "events" not in data:
@@ -171,21 +287,34 @@ def _register_routes(app: Flask) -> None:
         if not isinstance(events_raw, list):
             return jsonify({"error": "'events' must be a list"}), 400
 
+        # ── Task 6.2: Schema validation ──────────────────────────
+        errors: list[str] = []
+        for i, raw in enumerate(events_raw):
+            err = _validate_event(raw)
+            if err:
+                errors.append(f"event[{i}]: {err}")
+        if errors:
+            return jsonify({"error": "Validation failed", "details": errors}), 400
+
+        # ── Task 5.3: Server-side title drop ─────────────────────
+        drop_titles = cfg.DROP_TITLES
+
         created = 0
         for raw in events_raw:
             try:
                 ts = raw.get("timestamp")
                 if isinstance(ts, str):
-                    # Accept ISO format; fall back to now
                     ts = datetime.fromisoformat(ts.replace("Z", "+00:00"))
                 else:
                     ts = datetime.now(timezone.utc)
+
+                title = "" if drop_titles else raw.get("window_title", "")
 
                 event = TelemetryEvent(
                     timestamp=ts,
                     user_id=raw.get("user_id", "default"),
                     app_name=raw.get("app_name", "unknown"),
-                    window_title=raw.get("window_title", ""),
+                    window_title=title,
                     keystroke_count=int(raw.get("keystroke_count", 0)),
                     mouse_clicks=int(raw.get("mouse_clicks", 0)),
                     mouse_distance=float(raw.get("mouse_distance", 0.0)),
@@ -200,6 +329,28 @@ def _register_routes(app: Flask) -> None:
         db.session.commit()
         logger.info("Ingested %d / %d events.", created, len(events_raw))
         return jsonify({"ingested": created}), 201
+
+    # ── Custom error handler for 413 (payload too large) ─────────
+    @app.errorhandler(413)
+    def too_large(e):
+        max_kb = cfg.MAX_REQUEST_SIZE_KB
+        device = request.headers.get("X-Device-Id", "unknown")
+        log_action(device, "request_too_large",
+                   detail=f"Exceeded {max_kb} KB limit")
+        return jsonify({
+            "error": f"Payload too large. Maximum allowed: {max_kb} KB."
+        }), 413
+
+    # ── Custom error handler for 429 (rate limited) ──────────────
+    @app.errorhandler(429)
+    def rate_limited(e):
+        device = request.headers.get("X-Device-Id", "unknown")
+        log_action(device, "rate_limited",
+                   detail=str(e.description))
+        return jsonify({
+            "error": "Too many requests. Slow down.",
+            "retry_after": e.description,
+        }), 429
 
     # ── helper: build a base query filtered by time + optional user_id ─
     def _base_query(start, end, user_id=None):
@@ -307,6 +458,8 @@ def _register_routes(app: Flask) -> None:
         else:
             deleted = _run_cleanup(cfg)
 
+        log_action("admin", "manual_cleanup",
+                   detail=f"Deleted {deleted} events (retention={cfg.DATA_RETENTION_DAYS}d)")
         return jsonify({"deleted": deleted, "retention_days": cfg.DATA_RETENTION_DAYS}), 200
 
     # ── GET /db-stats ────────────────────────────────────────────
@@ -447,6 +600,8 @@ def _register_routes(app: Flask) -> None:
         count = TelemetryEvent.query.filter_by(user_id=user_id).delete()
         db.session.commit()
         logger.info("Deleted %d events for user %r.", count, user_id)
+        log_action("admin", "delete_user", target_user=user_id,
+                   detail=f"Deleted {count} events")
         return jsonify({"deleted": count, "user_id": user_id}), 200
 
     # ── GET /admin/tracker-status ────────────────────────────────
@@ -498,7 +653,26 @@ def _register_routes(app: Flask) -> None:
     @app.route("/dashboard/<user_id>", methods=["GET"])
     def user_dashboard(user_id: str):
         """Serve a self-contained HTML dashboard for a specific user."""
+        log_action("visitor", "view_dashboard", target_user=user_id)
         return render_template("dashboard.html", user_id=user_id)
+
+    # ── GET /admin/audit-log ────────────────────────────────────
+    @app.route("/admin/audit-log", methods=["GET"])
+    def admin_audit_log():
+        """Return the most recent audit log entries.
+
+        Optional query params: ?limit=50&action=delete_user
+        """
+        from backend.models import AuditLog
+        limit = min(int(request.args.get("limit", 100)), 500)
+        q = AuditLog.query.order_by(AuditLog.timestamp.desc())
+
+        action_filter = request.args.get("action")
+        if action_filter:
+            q = q.filter(AuditLog.action == action_filter)
+
+        entries = q.limit(limit).all()
+        return jsonify([e.to_dict() for e in entries]), 200
 
     # ── GET /health ─────────────────────────────────────────────
     @app.route("/health", methods=["GET"])

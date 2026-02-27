@@ -419,9 +419,21 @@ def summarize_buckets(buckets: list[Bucket]) -> dict:
 
 
 def _is_browser(app_name: str, cfg: Config) -> bool:
-    """Return True if the app is a web browser (per BROWSER_APPS config)."""
+    """Return True if the app is a web browser (per BROWSER_APPS config).
+
+    Short patterns (< 4 chars, e.g. "arc") require exact match to avoid
+    false positives like "searchhost" containing "arc".  Longer patterns use
+    bidirectional substring matching so both the full display name
+    ("Google Chrome") and the short process name ("chrome") are recognized.
+    """
     name_lower = app_name.lower()
-    return any(b in name_lower for b in cfg.BROWSER_APPS)
+    for b in cfg.BROWSER_APPS:
+        if len(b) < 4:
+            if name_lower == b:
+                return True
+        elif b in name_lower or name_lower in b:
+            return True
+    return False
 
 
 def _extract_site_label(window_title: str, cfg: Config) -> str:
